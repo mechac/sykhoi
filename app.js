@@ -70,7 +70,6 @@ const themes = [
 ];
 
 document.getElementById("doneBtn").addEventListener("click", () => {
-  // Выбор темы по 2-часовому интервалу
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
   const header = document.querySelector('.header');
@@ -89,21 +88,17 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     loader.style.display = 'flex';
   }
 
-  // Через 2 секунды скрываем GIF и показываем текст "Ваша тема"
   setTimeout(() => {
     if (loader) {
       loader.style.display = 'none';
       loader.classList.remove('fullscreen');
     }
 
-    // Показываем общее имя вместо конкретного названия
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
     document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
 
-    // Показать карточку темы
     document.querySelector(".theme-display").style.display = "block";
 
-    // Переводим модал в полноэкранный режим для установки темы
     const overlay = document.querySelector('.overlay');
     const modal = document.querySelector('.modal');
     if (overlay) overlay.classList.add('fullscreen');
@@ -118,86 +113,68 @@ document.getElementById("doneBtn").addEventListener("click", () => {
       }
     };
 
-    // Запустить фейерверки на появление темы
     startFireworks(3000);
   }, 2000);
 });
 
-  // --- Обработчики задач (шаринг и подписка) ---
-  function markTaskDone(taskEl) {
-    const arrow = taskEl.querySelector('.arrow');
-    if (arrow) {
-      arrow.textContent = '✔️';
-      arrow.classList.add('checked');
-    }
+// --- ОБРАБОТЧИКИ ЗАДАЧ (ШАРИНГ И ПОДПИСКА) ---
+
+// ВАЖНО: Создайте файл share.html в корне сайта!
+const shareMsgPlain = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
+const sharePageUrl = 'https://mechac.github.io/sykhoi/share.html';
+const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
+
+function markTaskDone(taskEl) {
+  const arrow = taskEl.querySelector('.arrow');
+  if (arrow) {
+    arrow.textContent = '✔️';
+    arrow.classList.add('checked');
+  }
+}
+
+const taskEls = document.querySelectorAll('.tasks .task');
+if (taskEls && taskEls.length) {
+  // ЗАДАНИЕ 1: Отправить друзьям (с красивым предпросмотром)
+  const firstTask = taskEls[0];
+  if (firstTask) {
+    firstTask.style.cursor = 'pointer';
+    firstTask.addEventListener('click', () => {
+      try {
+        // Это создаст красивый предпросмотр с картинкой
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(sharePageUrl)}&text=${encodeURIComponent(shareMsgPlain)}`;
+        
+        if (tg && typeof tg.openLink === 'function') {
+          tg.openLink(shareUrl);
+        } else {
+          window.open(shareUrl, '_blank');
+        }
+        
+        markTaskDone(firstTask);
+      } catch (e) {
+        console.warn('Share failed:', e);
+        markTaskDone(firstTask);
+      }
+    });
   }
 
-  const taskEls = document.querySelectorAll('.tasks .task');
-  if (taskEls && taskEls.length) {
-    // 0 — отправить 3 друзьям (шаринг)
-    // Текст для шаринга (HTML) — используется в WebApp fallback
-    const shareMsgHtml = '<b>🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?</b>\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!';
-    // Текст без HTML для use в https://t.me/share/url
-    const shareMsgPlain = '🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!';
-    // URL изображения, которое должно показываться в превью. Замените на публичный URL вашей mess.jpg
-    const imageUrl = 'https://raw.githubusercontent.com/mechac/sykhoi/main/mess.jpg';
-
-    const first = taskEls[0];
-    if (first) {
-      first.style.cursor = 'pointer';
-      first.addEventListener('click', async () => {
-        try {
-          // 1) Попробуем WebApp API если доступно
-          if (tg && typeof tg.shareMessage === 'function') {
-            // Попытка использовать tg.shareMessage с HTML (некоторые WebApp реализации поддерживают)
-            const res = tg.shareMessage ? tg.shareMessage(shareMsgHtml) : null;
-            if (res && typeof res.then === 'function') await res;
-            markTaskDone(first);
-            return;
-          }
-
-          // 2) fallback: откроем стандартный Telegram share URL с указанием image URL для предпросмотра
-          // Для корректного предпросмотра `imageUrl` должен быть публично доступен.
-          const shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(imageUrl) + '&text=' + encodeURIComponent(shareMsgPlain);
-          if (tg && typeof tg.openLink === 'function') {
-            tg.openLink(shareUrl);
-          } else {
-            window.open(shareUrl, '_blank');
-          }
-          // Пометим задание выполненным (UX) — отметить можно и после возврата пользователя, но это упрощение
-          markTaskDone(first);
-        } catch (e) {
-          console.warn('share fallback failed', e);
-          // Покажем диалог с текстом для копирования
-          if (tg && typeof tg.showPopup === 'function') {
-            tg.showPopup({ title: 'Скопируйте сообщение', message: shareMsgPlain });
-          } else {
-            alert('Скопируйте сообщение для отправки:\n\n' + shareMsgPlain);
-          }
-          markTaskDone(first);
-        }
-      });
-    }
-
-    // 1 — подписаться на канал
-    const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
-    const second = taskEls[1];
-    if (second) {
-      second.style.cursor = 'pointer';
-      second.addEventListener('click', () => {
-        try {
-          if (tg && typeof tg.openLink === 'function') {
-            tg.openLink(channelUrl);
-          } else {
-            window.open(channelUrl, '_blank');
-          }
-        } catch (e) {
+  // ЗАДАНИЕ 2: Подписаться на канал
+  const secondTask = taskEls[1];
+  if (secondTask) {
+    secondTask.style.cursor = 'pointer';
+    secondTask.addEventListener('click', () => {
+      try {
+        if (tg && typeof tg.openLink === 'function') {
+          tg.openLink(channelUrl);
+        } else {
           window.open(channelUrl, '_blank');
         }
-        markTaskDone(second);
-      });
-    }
+      } catch (e) {
+        window.open(channelUrl, '_blank');
+      }
+      markTaskDone(secondTask);
+    });
   }
+}
 
 /* ===== Фейерверки ===== */
 function startFireworks(duration = 3000) {
@@ -267,7 +244,6 @@ function startFireworks(duration = 3000) {
   createBurst(w*0.5, h*0.35);
   createBurst(w*0.7, h*0.45);
   animId = requestAnimationFrame(loop);
-
 
   setTimeout(() => {
     cancelAnimationFrame(animId);
