@@ -135,35 +135,46 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   const taskEls = document.querySelectorAll('.tasks .task');
   if (taskEls && taskEls.length) {
     // 0 — отправить 3 друзьям (шаринг)
-    const shareMsg = `<b>🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?</b>\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!`;
+    // Текст для шаринга (HTML) — используется в WebApp fallback
+    const shareMsgHtml = `<b>🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?</b>\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!`;
+    // Текст без HTML для use в https://t.me/share/url
+    const shareMsgPlain = `🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!`;
+    // URL изображения, которое должно показываться в превью. Замените на публичный URL вашей mess.jpg
+    const imageUrl = 'mess.jpg';
+
     const first = taskEls[0];
     if (first) {
       first.style.cursor = 'pointer';
       first.addEventListener('click', async () => {
-        // вызов Telegram WebApp shareMessage если доступен
         try {
+          // 1) Попробуем WebApp API если доступно
           if (tg && typeof tg.shareMessage === 'function') {
-            // некоторые реализации могут быть синхронными
-            const res = tg.shareMessage(shareMsg);
-            if (res && typeof res.then === 'function') {
-              await res;
-            }
+            // Попытка использовать tg.shareMessage с HTML (некоторые WebApp реализации поддерживают)
+            const res = tg.shareMessage ? tg.shareMessage(shareMsgHtml) : null;
+            if (res && typeof res.then === 'function') await res;
             markTaskDone(first);
-          } else if (navigator.share) {
-            await navigator.share({ text: shareMsg });
-            markTaskDone(first);
-          } else {
-            // fallback — показать диалог с текстом для копирования
-            if (tg && typeof tg.showPopup === 'function') {
-              tg.showPopup({ title: 'Скопируйте сообщение', message: shareMsg });
-            } else {
-              alert('Скопируйте сообщение для отправки:\n\n' + shareMsg.replace(/<[^>]+>/g, ''));
-            }
+            return;
           }
-        } catch (e) {
-          // в случае ошибки пометим как сделанное, чтобы не блокировать UX
+
+          // 2) fallback: откроем стандартный Telegram share URL с указанием image URL для предпросмотра
+          // Для корректного предпросмотра `imageUrl` должен быть публично доступен.
+          const shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(imageUrl) + '&text=' + encodeURIComponent(shareMsgPlain);
+          if (tg && typeof tg.openLink === 'function') {
+            tg.openLink(shareUrl);
+          } else {
+            window.open(shareUrl, '_blank');
+          }
+          // Пометим задание выполненным (UX) — отметить можно и после возврата пользователя, но это упрощение
           markTaskDone(first);
-          console.warn('shareMessage failed', e);
+        } catch (e) {
+          console.warn('share fallback failed', e);
+          // Покажем диалог с текстом для копирования
+          if (tg && typeof tg.showPopup === 'function') {
+            tg.showPopup({ title: 'Скопируйте сообщение', message: shareMsgPlain });
+          } else {
+            alert('Скопируйте сообщение для отправки:\n\n' + shareMsgPlain);
+          }
+          markTaskDone(first);
         }
       });
     }
