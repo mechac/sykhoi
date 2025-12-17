@@ -86,24 +86,26 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-      if (tg && tg.switchInlineQuery) {
-      // query — текст, который вставится после @botusername
-      // Второй параметр (опционально): ['users', 'groups', 'channels'] — ограничивает типы чатов
-      tg.switchInlineQuery(shareMessageText, ['users', 'groups', 'channels']);
-    } else {
-      // Fallback на alert (если старый клиент)
-      alert('Поделитесь этим текстом в 3 чатах:\n\n@your_bot_username ' + shareMessageText + '\n\n(Скопируйте и отправьте вручную)');
-    }
+  if (tg && tg.switchInlineQuery) {
+    // Твой текст шаринга
+    const query = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!\n\nСсылка: " + window.location.href;
 
-      // Засчитываем задание сразу (галочка и счётчик)
-      if (!arrow.classList.contains('checked')) {
-        arrow.textContent = '✔';
-        arrow.classList.add('checked');
-        completedTasks++;
-      if (completedTasks === totalTasks) {
-        document.getElementById('doneBtn').disabled = false;
-      }
+    // Второй параметр: типы чатов (можно ограничить, или оставить пустым для всех)
+    tg.switchInlineQuery(query, ['users', 'groups', 'channels']);
+  } else {
+    // Fallback для очень старых клиентов
+    alert('Поделитесь этим текстом в 3 чатах:\n\n' + query + '\n\n(Скопируйте и отправьте вручную)');
+  }
+
+  // Засчитываем задание (галочка и разблокировка кнопки)
+  if (!arrow.classList.contains('checked')) {
+    arrow.textContent = '✔';
+    arrow.classList.add('checked');
+    completedTasks++;
+    if (completedTasks === totalTasks) {
+      document.getElementById('doneBtn').disabled = false;
     }
+  }
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(channelUrl);
