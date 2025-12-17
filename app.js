@@ -86,18 +86,19 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-  if (tg && tg.switchInlineQuery) {
-    // Твой текст шаринга
-    const query = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!\n\nСсылка: " + window.location.href;
+  const shareText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?";
+  const shareDescription = "Получай свои рандомные темы только для тебя каждые 24 часа!";
+  const shareUrl = "https://mechac.github.io/sykhoi/";  // короткая чистая ссылка
 
-    // Второй параметр: типы чатов (можно ограничить, или оставить пустым для всех)
-    tg.switchInlineQuery(query, ['users', 'groups', 'channels']);
+  const fullShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText + "\n" + shareDescription)}`;
+
+  if (tg && tg.openLink) {
+    tg.openLink(fullShareUrl);
   } else {
-    // Fallback для очень старых клиентов
-    alert('Поделитесь этим текстом в 3 чатах:\n\n' + query + '\n\n(Скопируйте и отправьте вручную)');
+    window.open(fullShareUrl, '_blank');
   }
 
-  // Засчитываем задание (галочка и разблокировка кнопки)
+  // Засчитываем задание сразу (галочка и разблокировка кнопки "Готово")
   if (!arrow.classList.contains('checked')) {
     arrow.textContent = '✔';
     arrow.classList.add('checked');
