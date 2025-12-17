@@ -76,8 +76,8 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   const tasks = document.querySelector('.tasks');
   const instructions = document.getElementById('instructions');
   if (header) header.style.display = 'none';
-  if (tasks) tasks.style.display = 'none';
-  if (instructions) instructions.style.display = 'none';
+  if (tasks) tasks.style.display = "none";
+  if (instructions) instructions.style.display = "none";
 
   const doneBtn = document.getElementById('doneBtn');
   if (doneBtn) doneBtn.style.display = 'none';
@@ -117,11 +117,12 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
-// --- ОБРАБОТЧИКИ ЗАДАЧ (ШАРИНГ И ПОДПИСКА) ---
+// --- ОБРАБОТЧИКИ ЗАДАЧ (БЕЗ share.html) ---
 
-// ВАЖНО: Создайте файл share.html в корне сайта!
-const shareMsgPlain = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
-const sharePageUrl = 'https://mechac.github.io/sykhoi/share.html';
+// Текст сообщения
+const shareMsg = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
+// URL вашего index.html (OG теги в нем создадут превью)
+const pageUrl = 'https://mechac.github.io/sykhoi/index.html';
 const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
 
 function markTaskDone(taskEl) {
@@ -134,26 +135,21 @@ function markTaskDone(taskEl) {
 
 const taskEls = document.querySelectorAll('.tasks .task');
 if (taskEls && taskEls.length) {
-  // ЗАДАНИЕ 1: Отправить друзьям (с красивым предпросмотром)
+  // ЗАДАНИЕ 1: Отправить друзьям (НАТИВНЫЙ ПРЕДПРОСМОТР)
   const firstTask = taskEls[0];
   if (firstTask) {
     firstTask.style.cursor = 'pointer';
     firstTask.addEventListener('click', () => {
-      try {
-        // Это создаст красивый предпросмотр с картинкой
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(sharePageUrl)}&text=${encodeURIComponent(shareMsgPlain)}`;
-        
-        if (tg && typeof tg.openLink === 'function') {
-          tg.openLink(shareUrl);
-        } else {
-          window.open(shareUrl, '_blank');
-        }
-        
-        markTaskDone(firstTask);
-      } catch (e) {
-        console.warn('Share failed:', e);
-        markTaskDone(firstTask);
+      // Открываем окно шаринга Telegram с превью из OG тегов
+      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
+      
+      if (tg && typeof tg.openLink === 'function') {
+        tg.openLink(telegramShareUrl);
+      } else {
+        window.open(telegramShareUrl, '_blank');
       }
+      
+      markTaskDone(firstTask);
     });
   }
 
@@ -162,13 +158,9 @@ if (taskEls && taskEls.length) {
   if (secondTask) {
     secondTask.style.cursor = 'pointer';
     secondTask.addEventListener('click', () => {
-      try {
-        if (tg && typeof tg.openLink === 'function') {
-          tg.openLink(channelUrl);
-        } else {
-          window.open(channelUrl, '_blank');
-        }
-      } catch (e) {
+      if (tg && typeof tg.openLink === 'function') {
+        tg.openLink(channelUrl);
+      } else {
         window.open(channelUrl, '_blank');
       }
       markTaskDone(secondTask);
