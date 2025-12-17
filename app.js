@@ -140,7 +140,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     // Текст без HTML для use в https://t.me/share/url
     const shareMsgPlain = `🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!`;
     // URL изображения, которое должно показываться в превью. Замените на публичный URL вашей mess.jpg
-    const imageUrl = 'https://raw.githubusercontent.com/mechac/sykhoi/main/mess.jpg'';
+    const imageUrl = 'https://raw.githubusercontent.com/mechac/sykhoi/main/mess.jpg';
 
     const first = taskEls[0];
     if (first) {
