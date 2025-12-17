@@ -1,4 +1,3 @@
-// WebView
 (function () {
   var eventHandlers = {};
 
