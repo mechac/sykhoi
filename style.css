@@ -111,6 +111,11 @@ body {
   color: #777;
 }
 
+.arrow.checked {
+  color: #2fbf6b;
+  font-weight: 700;
+}
+
 button {
   width: 100%;
   margin-top: 20px;
