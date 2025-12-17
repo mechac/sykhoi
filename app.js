@@ -167,16 +167,16 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     };
 
     // Показываем MainButton для шаринга
-    if (tg && tg.MainButton) {
-      tg.MainButton.text = "Поделиться с друзьями 🎉";
-      tg.MainButton.color = "#8774e1";
-      tg.MainButton.textColor = "#ffffff";
-      tg.MainButton.show();
-      tg.MainButton.onClick(() => {
-        shareWithFriends();
-        tg.MainButton.hide(); // Можно оставить видимой, если хочешь повторный шаринг
-      });
-    }
+    //if (tg && tg.MainButton) {
+      //tg.MainButton.text = "Поделиться с друзьями 🎉";
+      //tg.MainButton.color = "#8774e1";
+      //tg.MainButton.textColor = "#ffffff";
+      //tg.MainButton.show();
+      //tg.MainButton.onClick(() => {
+        //shareWithFriends();
+        //tg.MainButton.hide(); // Можно оставить видимой, если хочешь повторный шаринг
+      //});
+    //}
 
     // Запускаем фейерверки
     startFireworks(4000);
