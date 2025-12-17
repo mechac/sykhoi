@@ -86,19 +86,18 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-  const shareText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?";
-  const shareDescription = "Получай свои рандомные темы только для тебя каждые 24 часа!";
-  const shareUrl = "https://mechac.github.io/sykhoi/";  // короткая чистая ссылка
+  const shareText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
+  const shareUrl = "https://mechac.github.io/sykhoi/";  // Короткая чистая ссылка — без #tgWebAppData!
 
-  const fullShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText + "\n" + shareDescription)}`;
+  const fullShareLink = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
 
-  if (tg && tg.openLink) {
-    tg.openLink(fullShareUrl);
+  if (tg && tg.openTelegramLink) {
+    tg.openTelegramLink(fullShareLink);  // Открывает внутри Telegram с выбором чата
   } else {
-    window.open(fullShareUrl, '_blank');
+    window.open(fullShareLink, '_blank');  // Fallback для браузера
   }
 
-  // Засчитываем задание сразу (галочка и разблокировка кнопки "Готово")
+  // Засчитываем задание (галочка и разблокировка "Готово")
   if (!arrow.classList.contains('checked')) {
     arrow.textContent = '✔';
     arrow.classList.add('checked');
@@ -107,6 +106,7 @@ tasks.forEach(task => {
       document.getElementById('doneBtn').disabled = false;
     }
   }
+
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(channelUrl);
