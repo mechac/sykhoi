@@ -1,6 +1,11 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
+// Объявляем константы ВЫШЕ, чтобы они были доступны в функциях
+const shareMsg = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
+const pageUrl = 'https://mechac.github.io/sykhoi/index.html';
+const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
+
 const themes = [
   {
     name: "Темная тема",
@@ -69,9 +74,12 @@ const themes = [
   }
 ];
 
+// --- ОБРАБОТКА КНОПКИ "ГОТОВО" ---
 document.getElementById("doneBtn").addEventListener("click", () => {
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
+  
+  // Скрываем старые элементы
   const header = document.querySelector('.header');
   const tasks = document.querySelector('.tasks');
   const instructions = document.getElementById('instructions');
@@ -82,12 +90,14 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   const doneBtn = document.getElementById('doneBtn');
   if (doneBtn) doneBtn.style.display = 'none';
 
+  // Показываем лоадер
   const loader = document.getElementById('loader');
   if (loader) {
     loader.classList.add('fullscreen');
     loader.style.display = 'flex';
   }
 
+  // Через 2 секунды показываем результат
   setTimeout(() => {
     if (loader) {
       loader.style.display = 'none';
@@ -104,6 +114,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     if (overlay) overlay.classList.add('fullscreen');
     if (modal) modal.classList.add('fullscreen');
 
+    // Настройка кнопки установки темы
     const installBtn = document.getElementById("installBtn");
     installBtn.onclick = () => {
       if (tg && tg.openLink) {
@@ -113,17 +124,12 @@ document.getElementById("doneBtn").addEventListener("click", () => {
       }
     };
 
+    // Запускаем фейерверки
     startFireworks(3000);
   }, 2000);
 });
 
-// --- ОБРАБОТЧИКИ ЗАДАЧ (БЕЗ share.html) ---
-
-// Текст сообщения
-const shareMsg = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
-// URL вашего index.html (OG теги в нем создадут превью)
-const pageUrl = 'https://mechac.github.io/sykhoi/index.html';
-const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
+// --- ОБРАБОТЧИКИ ЗАДАЧ (ИСПРАВЛЕННАЯ ЛОГИКА) ---
 
 function markTaskDone(taskEl) {
   const arrow = taskEl.querySelector('.arrow');
@@ -134,25 +140,28 @@ function markTaskDone(taskEl) {
 }
 
 const taskEls = document.querySelectorAll('.tasks .task');
+
 if (taskEls && taskEls.length) {
-  // ЗАДАНИЕ 1: Отправить друзьям (НАТИВНЫЙ ПРЕДПРОСМОТР)
+  // ЗАДАНИЕ 1: Отправить друзьям - ТЕПЕРЬ ВСЕГДА ИСПОЛЬЗУЕТ НАТИВНЫЙ ИНТЕРФЕЙС
   const firstTask = taskEls[0];
   if (firstTask) {
     firstTask.style.cursor = 'pointer';
     firstTask.addEventListener('click', () => {
-        if (tg && typeof tg.shareMessage === 'function') {
-            tg.shareMessage({
-            text: `${shareMsg}\n\n${pageUrl}`
-            });
-        } else {
-        // fallback если открыли не в Telegram
-            const telegramShareUrl =
-            `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
-            window.open(telegramShareUrl, '_blank');
-  }
-
-  markTaskDone(firstTask);
-});
+      // ВСЕГДА используем tg.shareMessage если доступен Telegram Web App
+      if (tg) {
+        // В десктопных версиях Telegram это покажет нативный интерфейс
+        tg.shareMessage({
+          text: `${shareMsg}\n\n${pageUrl}`
+        });
+      } else {
+        // Fallback для браузера (но это уже не будет нативный интерфейс)
+        const telegramShareUrl = 
+          `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
+        window.open(telegramShareUrl, '_blank');
+      }
+      
+      markTaskDone(firstTask);
+    });
   }
 
   // ЗАДАНИЕ 2: Подписаться на канал
@@ -160,7 +169,7 @@ if (taskEls && taskEls.length) {
   if (secondTask) {
     secondTask.style.cursor = 'pointer';
     secondTask.addEventListener('click', () => {
-      if (tg && typeof tg.openLink === 'function') {
+      if (tg && tg.openLink) {
         tg.openLink(channelUrl);
       } else {
         window.open(channelUrl, '_blank');
@@ -170,7 +179,7 @@ if (taskEls && taskEls.length) {
   }
 }
 
-/* ===== Фейерверки ===== */
+// --- ФУНКЦИЯ ФЕЙЕРВЕРКОВ (БЕЗ ИЗМЕНЕНИЙ) ---
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
