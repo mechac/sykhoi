@@ -1,11 +1,16 @@
-const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-if (tg && tg.expand) tg.expand();
+// ============================================
+// БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM WEB APP
+// ============================================
 
-// Объявляем константы ВЫШЕ, чтобы они были доступны в функциях
-const shareMsg = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
-const pageUrl = 'https://mechac.github.io/sykhoi/index.html';
-const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
+let tg = null;
+let isTelegramWebApp = false;
 
+// Константы для общего использования
+const SHARE_MSG = `🙈 Хочешь получить бесплатные подарки?\n\nПолучай каждые 24 часа в бесплатной рулетке!`;
+const PAGE_URL = 'https://mechac.github.io/sykhoi/index.html';
+const CHANNEL_URL = 'https://t.me/+7tUrZjQhP-4wMGZi';
+
+// Список тем
 const themes = [
   {
     name: "Темная тема",
@@ -74,62 +79,88 @@ const themes = [
   }
 ];
 
-// --- ОБРАБОТКА КНОПКИ "ГОТОВО" ---
-document.getElementById("doneBtn").addEventListener("click", () => {
-  const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
-  const selected = themes[index];
-  
-  // Скрываем старые элементы
-  const header = document.querySelector('.header');
-  const tasks = document.querySelector('.tasks');
-  const instructions = document.getElementById('instructions');
-  if (header) header.style.display = 'none';
-  if (tasks) tasks.style.display = "none";
-  if (instructions) instructions.style.display = "none";
+// ============================================
+// ФУНКЦИИ ПОМОЩНИКИ
+// ============================================
 
-  const doneBtn = document.getElementById('doneBtn');
-  if (doneBtn) doneBtn.style.display = 'none';
-
-  // Показываем лоадер
-  const loader = document.getElementById('loader');
-  if (loader) {
-    loader.classList.add('fullscreen');
-    loader.style.display = 'flex';
-  }
-
-  // Через 2 секунды показываем результат
-  setTimeout(() => {
-    if (loader) {
-      loader.style.display = 'none';
-      loader.classList.remove('fullscreen');
+function safeInitTelegram() {
+  try {
+    // Проверяем, запущены ли мы в Telegram Web App
+    if (window.Telegram && window.Telegram.WebApp) {
+      tg = window.Telegram.WebApp;
+      isTelegramWebApp = true;
+      console.log('✅ Telegram Web App обнаружен');
+      
+      // Медленная инициализация для избежания конфликтов
+      setTimeout(() => {
+        try {
+          if (typeof tg.ready === 'function') {
+            tg.ready();
+          }
+          
+          // Расширяем Web App если нужно
+          if (tg.expand && typeof tg.expand === 'function' && !tg.isExpanded) {
+            setTimeout(() => {
+              try {
+                tg.expand();
+                document.body.classList.add('webapp-expanded');
+              } catch (e) {
+                console.warn('Не удалось расширить Web App:', e);
+              }
+            }, 300);
+          }
+        } catch (e) {
+          console.error('Ошибка инициализации Telegram Web App:', e);
+        }
+      }, 500);
+    } else {
+      // Fallback режим - не в Telegram
+      console.log('⚠️ Запущено вне Telegram Web App - используем fallback');
+      tg = createFallbackTelegram();
+      showBrowserWarning();
     }
+  } catch (error) {
+    console.error('Критическая ошибка инициализации:', error);
+    tg = createFallbackTelegram();
+  }
+}
 
-    document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
-    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+function createFallbackTelegram() {
+  return {
+    platform: 'unknown',
+    isExpanded: true,
+    openLink: function(url) { 
+      window.open(url, '_blank'); 
+    },
+    shareMessage: function(params) {
+      // Fallback для shareMessage
+      const text = params.text || SHARE_MSG;
+      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(PAGE_URL)}&text=${encodeURIComponent(text)}`;
+      window.open(telegramShareUrl, '_blank');
+      return true;
+    },
+    expand: function() {
+      console.log('Web App expanded (fallback)');
+      document.body.classList.add('webapp-expanded');
+    },
+    ready: function() {
+      console.log('Web App ready (fallback)');
+    }
+  };
+}
 
-    document.querySelector(".theme-display").style.display = "block";
-
-    const overlay = document.querySelector('.overlay');
-    const modal = document.querySelector('.modal');
-    if (overlay) overlay.classList.add('fullscreen');
-    if (modal) modal.classList.add('fullscreen');
-
-    // Настройка кнопки установки темы
-    const installBtn = document.getElementById("installBtn");
-    installBtn.onclick = () => {
-      if (tg && tg.openLink) {
-        tg.openLink(selected.url);
-      } else {
-        window.open(selected.url, "_blank");
+function showBrowserWarning() {
+  // Показываем предупреждение только если явно открыто в браузере
+  if (!window.location.href.includes('web.telegram.org') && 
+      !window.location.href.includes('t.me')) {
+    setTimeout(() => {
+      const errorOverlay = document.getElementById('errorOverlay');
+      if (errorOverlay) {
+        errorOverlay.style.display = 'flex';
       }
-    };
-
-    // Запускаем фейерверки
-    startFireworks(3000);
-  }, 2000);
-});
-
-// --- ОБРАБОТЧИКИ ЗАДАЧ (ИСПРАВЛЕННАЯ ЛОГИКА) ---
+    }, 2000);
+  }
+}
 
 function markTaskDone(taskEl) {
   const arrow = taskEl.querySelector('.arrow');
@@ -139,50 +170,151 @@ function markTaskDone(taskEl) {
   }
 }
 
-const taskEls = document.querySelectorAll('.tasks .task');
+// ============================================
+// ОБРАБОТЧИКИ ЗАДАЧ
+// ============================================
 
-if (taskEls && taskEls.length) {
-  // ЗАДАНИЕ 1: Отправить друзьям - ТЕПЕРЬ ВСЕГДА ИСПОЛЬЗУЕТ НАТИВНЫЙ ИНТЕРФЕЙС
-  const firstTask = taskEls[0];
-  if (firstTask) {
-    firstTask.style.cursor = 'pointer';
-    firstTask.addEventListener('click', () => {
-      // ВСЕГДА используем tg.shareMessage если доступен Telegram Web App
-      if (tg) {
-        // В десктопных версиях Telegram это покажет нативный интерфейс
-        tg.shareMessage({
-          text: `${shareMsg}\n\n${pageUrl}`
-        });
-      } else {
-        // Fallback для браузера (но это уже не будет нативный интерфейс)
-        const telegramShareUrl = 
-          `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
-        window.open(telegramShareUrl, '_blank');
-      }
+function setupTaskHandlers() {
+  const task1 = document.getElementById('task1');
+  const task2 = document.getElementById('task2');
+  
+  if (task1) {
+    task1.style.cursor = 'pointer';
+    task1.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
       
-      markTaskDone(firstTask);
+      console.log('🔄 Задача 1: Отправить друзьям');
+      
+      // Используем безопасный вызов
+      setTimeout(() => {
+        try {
+          const shareText = `${SHARE_MSG}\n\n${PAGE_URL}`;
+          
+          if (isTelegramWebApp && tg.shareMessage) {
+            // Нативный интерфейс Telegram
+            tg.shareMessage({ text: shareText });
+            console.log('✅ Используется нативный tg.shareMessage()');
+          } else {
+            // Fallback для браузера
+            const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(PAGE_URL)}&text=${encodeURIComponent(SHARE_MSG)}`;
+            window.open(telegramShareUrl, '_blank');
+            console.log('✅ Используется fallback ссылка');
+          }
+          
+          markTaskDone(task1);
+        } catch (error) {
+          console.error('❌ Ошибка при отправке сообщения:', error);
+          markTaskDone(task1);
+        }
+      }, 50);
     });
   }
-
-  // ЗАДАНИЕ 2: Подписаться на канал
-  const secondTask = taskEls[1];
-  if (secondTask) {
-    secondTask.style.cursor = 'pointer';
-    secondTask.addEventListener('click', () => {
-      if (tg && tg.openLink) {
-        tg.openLink(channelUrl);
-      } else {
-        window.open(channelUrl, '_blank');
-      }
-      markTaskDone(secondTask);
+  
+  if (task2) {
+    task2.style.cursor = 'pointer';
+    task2.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      console.log('🔄 Задача 2: Подписаться на канал');
+      
+      setTimeout(() => {
+        try {
+          if (tg.openLink) {
+            tg.openLink(CHANNEL_URL);
+          } else {
+            window.open(CHANNEL_URL, '_blank');
+          }
+          markTaskDone(task2);
+        } catch (error) {
+          console.error('❌ Ошибка при открытии канала:', error);
+          markTaskDone(task2);
+        }
+      }, 50);
     });
   }
 }
 
-// --- ФУНКЦИЯ ФЕЙЕРВЕРКОВ (БЕЗ ИЗМЕНЕНИЙ) ---
+// ============================================
+// ОБРАБОТКА КНОПКИ "ГОТОВО"
+// ============================================
+
+function setupDoneButton() {
+  const doneBtn = document.getElementById('doneBtn');
+  if (!doneBtn) return;
+  
+  doneBtn.addEventListener('click', function() {
+    console.log('🎲 Кнопка "Готово" нажата');
+    
+    // Выбираем тему по времени
+    const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
+    const selected = themes[index];
+    console.log(`🎨 Выбрана тема: ${selected.name}`);
+    
+    // Скрываем старые элементы
+    const header = document.querySelector('.header');
+    const tasks = document.querySelector('.tasks');
+    const instructions = document.getElementById('instructions');
+    
+    if (header) header.style.display = 'none';
+    if (tasks) tasks.style.display = "none";
+    if (instructions) instructions.style.display = "none";
+    doneBtn.style.display = 'none';
+    
+    // Показываем лоадер
+    const loader = document.getElementById('loader');
+    if (loader) {
+      loader.classList.add('fullscreen');
+      loader.style.display = 'flex';
+    }
+    
+    // Через 2 секунды показываем результат
+    setTimeout(() => {
+      if (loader) {
+        loader.style.display = 'none';
+        loader.classList.remove('fullscreen');
+      }
+      
+      // Показываем результат
+      document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
+      document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+      document.querySelector(".theme-display").style.display = "block";
+      
+      // Переключаем в полноэкранный режим
+      const overlay = document.querySelector('.overlay');
+      const modal = document.querySelector('.modal');
+      if (overlay) overlay.classList.add('fullscreen');
+      if (modal) modal.classList.add('fullscreen');
+      
+      // Настройка кнопки установки темы
+      const installBtn = document.getElementById("installBtn");
+      if (installBtn) {
+        installBtn.onclick = function() {
+          console.log(`🔗 Установка темы: ${selected.url}`);
+          if (tg && tg.openLink) {
+            tg.openLink(selected.url);
+          } else {
+            window.open(selected.url, "_blank");
+          }
+        };
+      }
+      
+      // Запускаем фейерверки
+      startFireworks(3000);
+      console.log('🎆 Фейерверки запущены');
+    }, 2000);
+  });
+}
+
+// ============================================
+// ФЕЙЕРВЕРКИ (без изменений)
+// ============================================
+
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
+  
   canvas.classList.add('fireworks-active');
   canvas.style.display = 'block';
   const ctx = canvas.getContext('2d');
@@ -256,4 +388,42 @@ function startFireworks(duration = 3000) {
     canvas.classList.remove('fireworks-active');
     window.removeEventListener('resize', resize);
   }, duration);
+}
+
+// ============================================
+// ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Страница загружена, инициализация...');
+  
+  // Инициализируем Telegram Web App
+  safeInitTelegram();
+  
+  // Настраиваем обработчики
+  setupTaskHandlers();
+  setupDoneButton();
+  
+  // Настраиваем кнопку закрытия
+  const closeBtn = document.querySelector('.close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close();
+      }
+    });
+  }
+  
+  console.log('✅ Приложение инициализировано');
+});
+
+// Fallback если DOM уже загружен
+if (document.readyState !== 'loading') {
+  setTimeout(() => {
+    safeInitTelegram();
+    setupTaskHandlers();
+    setupDoneButton();
+  }, 100);
 }
