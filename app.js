@@ -86,16 +86,24 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-  if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('7.8') && tg.shareMessage) {  // или '8.0' после правки
-    tg.shareMessage(shareMessageText);
+  if (tg && tg.switchInlineQuery) {
+    // query — текст, который вставится после @botusername
+    // Второй параметр (опционально): ['users', 'groups', 'channels'] — ограничивает типы чатов
+    tg.switchInlineQuery(shareMessageText, ['users', 'groups', 'channels']);
   } else {
-    // Fallback: показать текст для ручного копирования
-    alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
-    // Опционально: попробовать navigator.share если в браузере
-    if (navigator.share) {
-      navigator.share({ text: shareMessageText });
-    }
+    // Fallback на alert (если старый клиент)
+    alert('Поделитесь этим текстом в 3 чатах:\n\n@your_bot_username ' + shareMessageText + '\n\n(Скопируйте и отправьте вручную)');
   }
+
+  // Засчитываем задание сразу (галочка и счётчик)
+    if (!arrow.classList.contains('checked')) {
+      arrow.textContent = '✔';
+      arrow.classList.add('checked');
+      completedTasks++;
+      if (completedTasks === totalTasks) {
+        document.getElementById('doneBtn').disabled = false;
+      }
+    }
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(channelUrl);
