@@ -140,17 +140,19 @@ if (taskEls && taskEls.length) {
   if (firstTask) {
     firstTask.style.cursor = 'pointer';
     firstTask.addEventListener('click', () => {
-      // Открываем окно шаринга Telegram с превью из OG тегов
-      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
-      
-      if (tg && typeof tg.openLink === 'function') {
-        tg.openLink(telegramShareUrl);
-      } else {
-        window.open(telegramShareUrl, '_blank');
-      }
-      
-      markTaskDone(firstTask);
-    });
+        if (tg && typeof tg.shareMessage === 'function') {
+            tg.shareMessage({
+            text: `${shareMsg}\n\n${pageUrl}`
+            });
+        } else {
+        // fallback если открыли не в Telegram
+            const telegramShareUrl =
+            `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareMsg)}`;
+            window.open(telegramShareUrl, '_blank');
+  }
+
+  markTaskDone(firstTask);
+});
   }
 
   // ЗАДАНИЕ 2: Подписаться на канал
