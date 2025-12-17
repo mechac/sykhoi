@@ -86,20 +86,20 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-  if (tg && tg.switchInlineQuery) {
-    // query — текст, который вставится после @botusername
-    // Второй параметр (опционально): ['users', 'groups', 'channels'] — ограничивает типы чатов
-    tg.switchInlineQuery(shareMessageText, ['users', 'groups', 'channels']);
-  } else {
-    // Fallback на alert (если старый клиент)
-    alert('Поделитесь этим текстом в 3 чатах:\n\n@your_bot_username ' + shareMessageText + '\n\n(Скопируйте и отправьте вручную)');
-  }
+      if (tg && tg.switchInlineQuery) {
+      // query — текст, который вставится после @botusername
+      // Второй параметр (опционально): ['users', 'groups', 'channels'] — ограничивает типы чатов
+      tg.switchInlineQuery(shareMessageText, ['users', 'groups', 'channels']);
+    } else {
+      // Fallback на alert (если старый клиент)
+      alert('Поделитесь этим текстом в 3 чатах:\n\n@your_bot_username ' + shareMessageText + '\n\n(Скопируйте и отправьте вручную)');
+    }
 
-  // Засчитываем задание сразу (галочка и счётчик)
-    if (!arrow.classList.contains('checked')) {
-      arrow.textContent = '✔';
-      arrow.classList.add('checked');
-      completedTasks++;
+      // Засчитываем задание сразу (галочка и счётчик)
+      if (!arrow.classList.contains('checked')) {
+        arrow.textContent = '✔';
+        arrow.classList.add('checked');
+        completedTasks++;
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
