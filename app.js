@@ -123,6 +123,71 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
+  // --- Обработчики задач (шаринг и подписка) ---
+  function markTaskDone(taskEl) {
+    const arrow = taskEl.querySelector('.arrow');
+    if (arrow) {
+      arrow.textContent = '✔️';
+      arrow.classList.add('checked');
+    }
+  }
+
+  const taskEls = document.querySelectorAll('.tasks .task');
+  if (taskEls && taskEls.length) {
+    // 0 — отправить 3 друзьям (шаринг)
+    const shareMsg = `<b>🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?</b>\n\nПолучай свои рандомные темы только для тебя каждые 24 часа!`;
+    const first = taskEls[0];
+    if (first) {
+      first.style.cursor = 'pointer';
+      first.addEventListener('click', async () => {
+        // вызов Telegram WebApp shareMessage если доступен
+        try {
+          if (tg && typeof tg.shareMessage === 'function') {
+            // некоторые реализации могут быть синхронными
+            const res = tg.shareMessage(shareMsg);
+            if (res && typeof res.then === 'function') {
+              await res;
+            }
+            markTaskDone(first);
+          } else if (navigator.share) {
+            await navigator.share({ text: shareMsg });
+            markTaskDone(first);
+          } else {
+            // fallback — показать диалог с текстом для копирования
+            if (tg && typeof tg.showPopup === 'function') {
+              tg.showPopup({ title: 'Скопируйте сообщение', message: shareMsg });
+            } else {
+              alert('Скопируйте сообщение для отправки:\n\n' + shareMsg.replace(/<[^>]+>/g, ''));
+            }
+          }
+        } catch (e) {
+          // в случае ошибки пометим как сделанное, чтобы не блокировать UX
+          markTaskDone(first);
+          console.warn('shareMessage failed', e);
+        }
+      });
+    }
+
+    // 1 — подписаться на канал
+    const channelUrl = 'https://t.me/+7tUrZjQhP-4wMGZi';
+    const second = taskEls[1];
+    if (second) {
+      second.style.cursor = 'pointer';
+      second.addEventListener('click', () => {
+        try {
+          if (tg && typeof tg.openLink === 'function') {
+            tg.openLink(channelUrl);
+          } else {
+            window.open(channelUrl, '_blank');
+          }
+        } catch (e) {
+          window.open(channelUrl, '_blank');
+        }
+        markTaskDone(second);
+      });
+    }
+  }
+
 /* ===== Фейерверки ===== */
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
