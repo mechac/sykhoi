@@ -1,11 +1,11 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-if (tg) {
-  tg.expand();
-}
+if (tg && tg.expand) tg.expand();
 
-// Текст для шаринга
+// ✅ Получаем message_id из URL параметров
+const urlParams = new URLSearchParams(window.location.search);
+const preparedMessageId = urlParams.get('message_id');
+
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
-const webAppUrl = "https://mechac.github.io/sykhoi/"; // Чистая ссылка без параметров
 const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
 const themes = [
@@ -76,41 +76,40 @@ const themes = [
   }
 ];
 
-// Функция шаринга сообщения
-function shareWithFriends() {
-  const fullText = `${shareMessageText}\n\nСсылка: ${webAppUrl}`;
-  const shareLink = `https://t.me/share/url?url=${encodeURIComponent(webAppUrl)}&text=${encodeURIComponent(fullText)}`;
-
-  if (tg && tg.openTelegramLink) {
-    tg.openTelegramLink(shareLink);
-  } else {
-    window.open(shareLink, '_blank');
-  }
-}
-
-// Отслеживание заданий
+// Отслеживание выполненных заданий
 let completedTasks = 0;
 const totalTasks = 2;
-const tasks = document.querySelectorAll('.task');
 
+const tasks = document.querySelectorAll('.task');
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
   task.addEventListener('click', () => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
 
-    if (!arrow.classList.contains('checked')) {
-      if (type === 'share') {
-        shareWithFriends();
-      } else if (type === 'subscribe') {
-        if (tg && tg.openTelegramLink) {
-          tg.openTelegramLink(channelUrl);
-        } else {
-          window.open(channelUrl, '_blank');
+    if (type === 'share') {
+      // ✅ Используем подготовленное сообщение
+      if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
+        console.log("Sharing prepared message:", preparedMessageId);
+        tg.shareMessage(preparedMessageId);
+      } else {
+        // Fallback: показать текст для ручного копирования
+        alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
+        // Опционально: попробовать navigator.share если в браузере
+        if (navigator.share) {
+          navigator.share({ text: shareMessageText });
         }
       }
+    } else if (type === 'subscribe') {
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(channelUrl);
+      } else {
+        window.open(channelUrl, '_blank');
+      }
+    }
 
-      // Засчитываем задание
+    // Помечаем задание выполненным
+    if (!arrow.classList.contains('checked')) {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
@@ -122,33 +121,37 @@ tasks.forEach(task => {
   });
 });
 
-// Кнопка "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
-  if (completedTasks < totalTasks) return;
+  if (completedTasks < totalTasks) return; // на всякий случай
 
-  // Скрываем интерфейс заданий
-  document.querySelector('.header')?.style.setProperty('display', 'none');
-  document.querySelector('.tasks')?.style.setProperty('display', 'none');
-  document.getElementById('instructions')?.style.setProperty('display', 'none');
-  document.getElementById('doneBtn')?.style.setProperty('display', 'none');
+  const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
+  const selected = themes[index];
 
-  // Показываем лоадер
+  const header = document.querySelector('.header');
+  const tasksDiv = document.querySelector('.tasks');
+  const instructions = document.getElementById('instructions');
+  if (header) header.style.display = 'none';
+  if (tasksDiv) tasksDiv.style.display = 'none';
+  if (instructions) instructions.style.display = 'none';
+
+  const doneBtn = document.getElementById('doneBtn');
+  if (doneBtn) doneBtn.style.display = 'none';
+
   const loader = document.getElementById('loader');
   if (loader) {
     loader.classList.add('fullscreen');
     loader.style.display = 'flex';
   }
 
-  // Выбираем тему (обновляется каждые 2 часа)
-  const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
-  const selected = themes[index];
-
   setTimeout(() => {
-    loader.style.display = 'none';
-    loader.classList.remove('fullscreen');
+    if (loader) {
+      loader.style.display = 'none';
+      loader.classList.remove('fullscreen');
+    }
 
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
     document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+
     document.querySelector(".theme-display").style.display = "block";
 
     const overlay = document.querySelector('.overlay');
@@ -156,7 +159,6 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     if (overlay) overlay.classList.add('fullscreen');
     if (modal) modal.classList.add('fullscreen');
 
-    // Кнопка установки темы
     const installBtn = document.getElementById("installBtn");
     installBtn.onclick = () => {
       if (tg && tg.openLink) {
@@ -166,34 +168,21 @@ document.getElementById("doneBtn").addEventListener("click", () => {
       }
     };
 
-    // Показываем MainButton для шаринга
-    //if (tg && tg.MainButton) {
-      //tg.MainButton.text = "Поделиться с друзьями 🎉";
-      //tg.MainButton.color = "#8774e1";
-      //tg.MainButton.textColor = "#ffffff";
-      //tg.MainButton.show();
-      //tg.MainButton.onClick(() => {
-        //shareWithFriends();
-        //tg.MainButton.hide(); // Можно оставить видимой, если хочешь повторный шаринг
-      //});
-    //}
-
-    // Запускаем фейерверки
-    startFireworks(4000);
+    startFireworks(3000);
   }, 2000);
 });
 
 /* ===== Фейерверки ===== */
-function startFireworks(duration = 4000) {
+function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
-
   canvas.classList.add('fireworks-active');
   canvas.style.display = 'block';
-
   const ctx = canvas.getContext('2d');
+
   let w = canvas.width = window.innerWidth;
   let h = canvas.height = window.innerHeight;
+
   const particles = [];
   let animId;
 
@@ -206,7 +195,8 @@ function startFireworks(duration = 4000) {
       const speed = rand(1, 6);
       const angle = rand(0, Math.PI * 2);
       particles.push({
-        x: x, y: y,
+        x: x,
+        y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 60 + Math.floor(rand(0, 40)),
@@ -220,11 +210,12 @@ function startFireworks(duration = 4000) {
     w = canvas.width = window.innerWidth;
     h = canvas.height = window.innerHeight;
   }
+
   window.addEventListener('resize', resize);
 
   function loop() {
-    ctx.clearRect(0, 0, w, h);
-    if (Math.random() < 0.08) createBurst(rand(w * 0.2, w * 0.8), rand(h * 0.15, h * 0.6));
+    ctx.clearRect(0,0,w,h);
+    if (Math.random() < 0.08) createBurst(rand(w*0.2,w*0.8), rand(h*0.15,h*0.6));
 
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -237,22 +228,23 @@ function startFireworks(duration = 4000) {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.2 * (1 - t) + 0.6, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.2 * (1 - t) + 0.6, 0, Math.PI*2);
       ctx.fill();
-      if (p.age >= p.life) particles.splice(i, 1);
+      if (p.age >= p.life) particles.splice(i,1);
     }
+
     ctx.globalAlpha = 1;
     animId = requestAnimationFrame(loop);
   }
 
-  createBurst(w * 0.5, h * 0.35);
-  createBurst(w * 0.7, h * 0.45);
+  createBurst(w*0.5, h*0.35);
+  createBurst(w*0.7, h*0.45);
   animId = requestAnimationFrame(loop);
 
   setTimeout(() => {
     cancelAnimationFrame(animId);
     particles.length = 0;
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0,0,w,h);
     canvas.style.display = 'none';
     canvas.classList.remove('fireworks-active');
     window.removeEventListener('resize', resize);
