@@ -169,9 +169,10 @@ button {
   padding: 20px 0;
 }
 .loader img {
-  width: 120px;
-  height: auto;
-  display: block;
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  background: transparent;
 }
 
 
