@@ -1,17 +1,13 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
-// Получаем ID подготовленного сообщения из URL (на всякий случай оставляем, но больше не используем для шаринга)
-const urlParams = new URLSearchParams(window.location.search);
-const preparedMessageId = urlParams.get('message_id');
+// СТАТИЧЕСКИЙ ID — ВСЕГДА ИСПОЛЬЗУЕМ ЕГО
+// Замените на ID, полученный после выполнения /create_static
+const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
 
 // Для отладки
 console.log('Telegram WebApp:', tg);
-console.log('Prepared Message ID из URL:', preparedMessageId);
 console.log('WebApp version:', tg?.version);
-
-// СТАТИЧЕСКИЙ ID — всегда используем только его при шаринге
-const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
 
 // Текст для фолбэка (если shareMessage не сработает)
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
@@ -49,6 +45,7 @@ const themes = [
 let completedTasks = 0;
 const totalTasks = 2;
 const tasks = document.querySelectorAll('.task');
+
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
   task.addEventListener('click', () => {
@@ -61,7 +58,7 @@ tasks.forEach(task => {
     }
 
     if (type === 'share') {
-      // Всегда используем статический prepared message ID
+      // ВСЕГДА используем статический prepared message ID
       if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
         console.log("Sharing static prepared message:", STATIC_PREPARED_ID);
         tg.shareMessage(STATIC_PREPARED_ID);
