@@ -1,11 +1,11 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
-// ✅ Получаем ID подготовленного сообщения из URL
+// Получаем ID подготовленного сообщения из URL
 const urlParams = new URLSearchParams(window.location.search);
 const preparedMessageId = urlParams.get('message_id');
 
-// Для отладки (можно удалить в продакшене)
+// Для отладки
 console.log('Telegram WebApp:', tg);
 console.log('Prepared Message ID:', preparedMessageId);
 console.log('WebApp version:', tg?.version);
@@ -16,27 +16,27 @@ const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
 const themes = [
   {
-    name: "Темная тема",
+    name: "1 тема",
     url: "https://t.me/addtheme/K5q9kYcFSAeFO3PI",
     preview: { header: "#0f1720", headerText: "#e6eef8", bg: "#07101a", body: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))", incoming: "rgba(255,255,255,0.06)", outgoing: "#2f6bff", text: "#e6eef8" }
   },
   {
-    name: "Светлая тема",
+    name: "2 тема",
     url: "https://t.me/addtheme/W2iF6QpKuv1yVYnT",
     preview: { header: "#f1f5f9", headerText: "#0b1220", bg: "#ffffff", body: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00))", incoming: "#f1f5f9", outgoing: "#2f6bff", text: "#0b1220" }
   },
   {
-    name: "Синяя тема",
+    name: "3 тема",
     url: "https://t.me/bg/lr3hGi3U-UqyDAAArcRJk5yooy0",
     preview: { header: "#05233a", headerText: "#eaf6ff", bg: "#06283e", body: "linear-gradient(180deg, rgba(6,40,62,0.02), rgba(6,40,62,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#1e90ff", text: "#eaf6ff" }
   },
   {
-    name: "Зелёная тема",
+    name: "4 тема",
     url: "https://t.me/bg/9zHDI1iEuEoREAAASrlWw2E4vNk",
     preview: { header: "#072016", headerText: "#e6f8ef", bg: "#062217", body: "linear-gradient(180deg, rgba(6,34,23,0.02), rgba(6,34,23,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#2fbf6b", text: "#e6f8ef" }
   },
   {
-    name: "Красная тема",
+    name: "5 тема",
     url: "https://t.me/bg/xwN9xVivsEq5DQAAFft1SLmXAaU",
     preview: { header: "#2a0b0b", headerText: "#ffeef0", bg: "#2a0b0b", body: "linear-gradient(180deg, rgba(42,11,11,0.02), rgba(42,11,11,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#ff6b6b", text: "#ffeef0" }
   }
@@ -53,18 +53,23 @@ tasks.forEach(task => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
 
+    // Если задание уже выполнено, ничего не делаем
+    if (arrow.classList.contains('checked')) {
+      return;
+    }
+
     if (type === 'share') {
-      // ✅ ПРАВИЛЬНЫЙ shareMessage - показывает интерфейс выбора чата
+      // shareMessage - показывает интерфейс выбора чата
       if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
         console.log("Sharing prepared message:", preparedMessageId);
         tg.shareMessage(preparedMessageId);
       } 
-      // ✅ Альтернатива: просто текст (без подготовленного сообщения)
+      //Альтернатива: просто текст
       else if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
         console.log("Sharing plain text");
         tg.shareMessage(shareMessageText);
       } 
-      // ❌ Фолбэк: если не поддерживается
+      // Фолбэк: если не поддерживается
       else {
         console.warn("shareMessage not supported, using fallback");
         fallbackShare();
@@ -77,8 +82,8 @@ tasks.forEach(task => {
       }
     }
 
-    // Помечаем задание выполненным (только один раз)
-    if (!arrow.classList.contains('checked')) {
+    // Просто ждем 1.5 секунды и показываем галочку
+    setTimeout(() => {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
@@ -86,7 +91,7 @@ tasks.forEach(task => {
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
-    }
+    }, 1500);
   });
 });
 
@@ -125,7 +130,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     }
 
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
-    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 24 часа.";
     document.querySelector(".theme-display").style.display = "block";
 
     const overlay = document.querySelector('.overlay');
@@ -145,7 +150,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
-/* ===== Фейерверки ===== */
+//Фейерверки 
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
