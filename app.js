@@ -1,85 +1,84 @@
-const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-if (tg && tg.expand) tg.expand();
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters.command import CommandStart
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    WebAppInfo,
+    InlineQueryResultPhoto
+)
+from aiogram.methods import SavePreparedInlineMessage
+from env import BOT_TOKEN, MINI_APP_URL, IMAGE_URL
 
-// Считываем ID подготовленного сообщения из URL
-const urlParams = new URLSearchParams(window.location.search);
-const preparedIdFromUrl = urlParams.get('message_id');
+logging.basicConfig(level=logging.INFO)
 
-const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-const themes = [
-  { name: "1 тема", url: "https://t.me/addtheme/K5q9kYcFSAeFO3PI" },
-  { name: "2 тема", url: "https://t.me/addtheme/W2iF6QpKuv1yVYnT" },
-  { name: "3 тема", url: "https://t.me/bg/lr3hGi3U-UqyDAAArcRJk5yooy0" },
-  { name: "4 тема", url: "https://t.me/bg/9zHDI1iEuEoREAAASrlWw2E4vNk" },
-  { name: "5 тема", url: "https://t.me/bg/xwN9xVivsEq5DQAAFft1SLmXAaU" }
-];
+@dp.message(CommandStart())
+async def cmd_start(message: types.Message):
+    user_id = message.from_user.id
+    username = message.from_user.username or "Пользователь"
 
-let completedTasks = 0;
-const totalTasks = 2;
+    try:
+        # Генерируем уникальное подготовленное сообщение
+        # Кнопка внутри карточки ведет в бота, чтобы замкнуть цикл виральности
+        bot_user = await bot.get_me()
+        share_url = f"https://t.me/{bot_user.username}?start=ref_{user_id}"
 
-const tasks = document.querySelectorAll('.task');
-tasks.forEach(task => {
-  task.addEventListener('click', () => {
-    const type = task.dataset.task;
-    const arrow = task.querySelector('.arrow');
-    
-    if (arrow.classList.contains('checked')) return;
+        result = await bot(SavePreparedInlineMessage(
+            user_id=user_id,
+            result=InlineQueryResultPhoto(
+                id=f"share_{user_id}_{message.message_id}",
+                photo_url=IMAGE_URL,
+                thumbnail_url=IMAGE_URL,
+                title="🎨 Темы для Telegram",
+                description="Получай рандомные темы каждые 24 часа!",
+                caption=(
+                    f"<b>🙈 Привет от {username}!</b>\n\n"
+                    "<i>Хочешь получить крутую тему для оформления Telegram?</i>\n"
+                    "Жми на кнопку ниже и забирай свою!"
+                ),
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[
+                        InlineKeyboardButton(text="🎨 Получить тему", url=share_url)
+                    ]]
+                )
+            ),
+            allow_user_chats=True,
+            allow_bot_chats=True,
+            allow_group_chats=True,
+            allow_channel_chats=True
+        ))
 
-    if (type === 'share') {
-      // ПРОВЕРКА: Если есть ID и версия ТГ поддерживает shareMessage
-      if (tg?.isVersionAtLeast?.('7.8') && preparedIdFromUrl) {
-        tg.shareMessage(preparedIdFromUrl);
-      } else {
-        // Запасной вариант (обычный текст), если ID нет
-        const text = "Зацени крутые темы для Telegram в этом боте!";
-        if (navigator.share) navigator.share({ text });
-        else alert("Пожалуйста, поделитесь ссылкой на бота с друзьями!");
-      }
-    } else if (type === 'subscribe') {
-      if (tg) tg.openTelegramLink(channelUrl);
-      else window.open(channelUrl, '_blank');
-    }
+        # Важно: передаем полученный ID в URL мини-аппа
+        app_url_with_id = f"{MINI_APP_URL}?message_id={result.id}"
+        logging.info(f"Prepared ID for {user_id}: {result.id}")
 
-    // Имитация зачета задания
-    setTimeout(() => {
-      arrow.textContent = '✔';
-      arrow.classList.add('checked');
-      completedTasks++;
-      if (completedTasks === totalTasks) {
-        document.getElementById('doneBtn').disabled = false;
-      }
-    }, 2000);
-  });
-});
+    except Exception as e:
+        logging.error(f"Error creating prepared message: {e}")
+        app_url_with_id = MINI_APP_URL
 
-// Кнопка Готово и финал
-document.getElementById("doneBtn").addEventListener("click", () => {
-  if (completedTasks < totalTasks) return;
+    keb = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text='🎨 Открыть Темы', 
+                web_app=WebAppInfo(url=app_url_with_id)
+            )
+        ]]
+    )
 
-  const selected = themes[Math.floor(Math.random() * themes.length)];
+    await message.answer(
+        text=f"Привет, <b>{username}</b>! 🎉\nЧтобы выполнить задания и получить тему, открой приложение:",
+        reply_markup=keb,
+        parse_mode="HTML"
+    )
 
-  document.querySelectorAll('.header, .tasks, #instructions, #doneBtn').forEach(el => el.style.display = 'none');
-  const loader = document.getElementById('loader');
-  loader.style.display = 'flex';
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
-  setTimeout(() => {
-    loader.style.display = 'none';
-    document.getElementById("randomTheme").textContent = "Ваша тема готова!";
-    document.querySelector(".theme-display").style.display = "block";
-    
-    document.getElementById("installBtn").onclick = () => {
-      if (tg) tg.openLink(selected.url);
-      else window.open(selected.url, "_blank");
-    };
-    startFireworks(3000);
-  }, 2000);
-});
-
-// Функция фейерверка (упрощенная)
-function startFireworks(duration) {
-  const canvas = document.getElementById('fireworks');
-  if (!canvas) return;
-  canvas.style.display = 'block';
-  setTimeout(() => canvas.style.display = 'none', duration);
-}
+if __name__ == "__main__":
+    asyncio.run(main())
