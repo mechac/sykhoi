@@ -4,7 +4,7 @@ if (tg && tg.expand) tg.expand();
 // Получаем ID подготовленного сообщения из URL
 const urlParams = new URLSearchParams(window.location.search);
 const preparedMessageId = urlParams.get('message_id');
-
+const STATIC_PREPARED_ID = "83mI6agQIgVyD6OW"
 // Для отладки
 console.log('Telegram WebApp:', tg);
 console.log('Prepared Message ID:', preparedMessageId);
@@ -59,22 +59,16 @@ tasks.forEach(task => {
     }
 
     if (type === 'share') {
-      // shareMessage - показывает интерфейс выбора чата
-      if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing prepared message:", preparedMessageId);
-        tg.shareMessage(preparedMessageId);
-      } 
-      //Альтернатива: просто текст
-      else if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing plain text");
-        tg.shareMessage(shareMessageText);
-      } 
-      // Фолбэк: если не поддерживается
-      else {
-        console.warn("shareMessage not supported, using fallback");
-        fallbackShare();
-      }
-    } else if (type === 'subscribe') {
+  let messageToShare = preparedMessageId || STATIC_PREPARED_ID;
+
+  if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
+    console.log("Sharing prepared message:", messageToShare);
+    tg.shareMessage(messageToShare);
+  } else {
+    console.warn("shareMessage not supported, using fallback");
+    fallbackShare();
+  }
+} else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(channelUrl);
       } else {
