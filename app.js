@@ -1,18 +1,11 @@
-// ===== Инициализация Telegram Web App и получение параметров =====
+
+
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-const userId = tg?.initDataUnsafe?.user?.id || null;
-
-// Получаем message_id из URL (если передан через shareMessage)
-const urlParams = new URLSearchParams(window.location.search);
-const messageIdFromUrl = urlParams.get('message_id');
-
 if (tg && tg.expand) tg.expand();
 
-// Константы приложения
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
 const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
-// Список тем
 const themes = [
   {
     name: "Темная тема",
@@ -81,40 +74,10 @@ const themes = [
   }
 ];
 
-// Функция для запроса prepared message у бота
-async function requestPreparedMessage() {
-    if (!tg || !userId) {
-        console.warn('Telegram Web App or user ID is not available');
-        return null;
-    }
-    
-    // Если message_id уже есть в URL, используем его
-    if (messageIdFromUrl) {
-        console.log('Using message_id from URL:', messageIdFromUrl);
-        return messageIdFromUrl;
-    }
-    
-    try {
-        console.log('Requesting prepared message from bot...');
-        tg.sendData(JSON.stringify({
-            action: 'get_prepared_message',
-            user_id: userId
-        }));
-        
-        // В реальном приложении здесь нужно ждать ответа от бота
-        // Для упрощения возвращаем null и используем URL без параметров
-        return null;
-    } catch (e) {
-        console.error('Error requesting prepared message:', e);
-        return null;
-    }
-}
-
 // Отслеживание выполненных заданий
 let completedTasks = 0;
 const totalTasks = 2;
 
-// Обработчики заданий
 const tasks = document.querySelectorAll('.task');
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
@@ -123,21 +86,16 @@ tasks.forEach(task => {
     const arrow = task.querySelector('.arrow');
 
     if (type === 'share') {
-      // Исправленная проверка версии
-      if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('7.8') && tg.shareMessage) {
-        // Формируем URL с message_id для sharing
-        const shareUrl = messageIdFromUrl ? 
-          `${window.location.origin}${window.location.pathname}?message_id=${messageIdFromUrl}` :
-          window.location.href;
-        
-        tg.shareMessage(shareMessageText + '\n\n' + shareUrl);
-      } else {
-        // Fallback: показать текст для ручного копирования
-        alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
-        if (navigator.share) {
-          navigator.share({ text: shareMessageText });
-        }
-      }
+  if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('7.8') && tg.shareMessage) {  // или '8.0' после правки
+    tg.shareMessage(shareMessageText);
+  } else {
+    // Fallback: показать текст для ручного копирования
+    alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
+    // Опционально: попробовать navigator.share если в браузере
+    if (navigator.share) {
+      navigator.share({ text: shareMessageText });
+    }
+  }
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(channelUrl);
@@ -159,9 +117,8 @@ tasks.forEach(task => {
   });
 });
 
-// Обработчик кнопки "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
-  if (completedTasks < totalTasks) return;
+  if (completedTasks < totalTasks) return; // на всякий случай
 
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
@@ -289,18 +246,3 @@ function startFireworks(duration = 3000) {
     window.removeEventListener('resize', resize);
   }, duration);
 }
-
-// Инициализация при загрузке страницы
-window.addEventListener('load', async () => {
-    if (!tg) {
-        console.warn('Telegram Web App is not available');
-        return;
-    }
-    
-    console.log('Telegram Web App initialized:', tg);
-    console.log('User ID:', userId);
-    console.log('Message ID from URL:', messageIdFromUrl);
-    
-    // Запрашиваем prepared message при необходимости
-    await requestPreparedMessage();
-});
