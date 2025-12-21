@@ -1,15 +1,11 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
-// СТАТИЧЕСКИЙ ID — ВСЕГДА ИСПОЛЬЗУЕМ ЕГО
-// Замените на ID, полученный после выполнения /create_static
-const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
+const urlParams = new URLSearchParams(window.location.search);
+const userId = urlParams.get('user_id');
 
-// Для отладки
-console.log('Telegram WebApp:', tg);
-console.log('WebApp version:', tg?.version);
+let preparedMessageId = null;
 
-// Текст для фолбэка (если shareMessage не сработает)
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
 const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
@@ -41,7 +37,47 @@ const themes = [
   }
 ];
 
-// Отслеживание выполненных заданий
+async function requestPreparedMessageId() {
+  if (!userId || !tg?.sendData) {
+    console.error('No userId or sendData available');
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    // Отправляем запрос
+    tg.sendData(`get_prepared_id:${userId}`);
+    
+    const timeout = setTimeout(() => {
+      console.error('Timeout waiting for prepared message ID');
+      resolve(null);
+    }, 5000);
+    
+    // Обрабатываем ответ
+    tg.onEvent('webAppDataReceived', (data) => {
+      clearTimeout(timeout);
+      const response = data.data;
+      
+      if (response.startsWith('ID:')) {
+        const id = response.split(':')[1];
+        console.log('Received prepared message ID:', id);
+        resolve(id);
+      } else if (response.startsWith('ERROR:')) {
+        console.error('Bot error:', response);
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Получаем ID при загрузке
+(async () => {
+  if (userId) {
+    preparedMessageId = await requestPreparedMessageId();
+    console.log('Prepared message ID ready:', preparedMessageId);
+  }
+})();
+
+// Отслеживание заданий
 let completedTasks = 0;
 const totalTasks = 2;
 const tasks = document.querySelectorAll('.task');
@@ -52,16 +88,15 @@ tasks.forEach(task => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
     
-    // Если задание уже выполнено — ничего не делаем
     if (arrow.classList.contains('checked')) {
       return;
     }
 
     if (type === 'share') {
-      // ВСЕГДА используем статический prepared message ID
-      if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing static prepared message:", STATIC_PREPARED_ID);
-        tg.shareMessage(STATIC_PREPARED_ID);
+      // Используем ID, полученный от бота
+      if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
+        console.log("Sharing prepared message:", preparedMessageId);
+        tg.shareMessage(preparedMessageId);
       } else {
         console.warn("shareMessage not supported, using fallback");
         fallbackShare();
@@ -74,7 +109,6 @@ tasks.forEach(task => {
       }
     }
 
-    // Показываем галочку через 1.5 секунды (имитация выполнения)
     setTimeout(() => {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
@@ -86,7 +120,6 @@ tasks.forEach(task => {
   });
 });
 
-// Фолбэк для старых версий Telegram
 function fallbackShare() {
   alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
   if (navigator.share) {
@@ -94,27 +127,23 @@ function fallbackShare() {
   }
 }
 
-// Кнопка "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
   if (completedTasks < totalTasks) return;
 
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
 
-  // Скрываем начальный экран
   ['.header', '.tasks', '#instructions', '#doneBtn'].forEach(selector => {
     const el = document.querySelector(selector);
     if (el) el.style.display = 'none';
   });
 
-  // Показываем лоадер
   const loader = document.getElementById('loader');
   if (loader) {
     loader.classList.add('fullscreen');
-    loader.style.display = 'flex';
+    loader.style.display = "flex";
   }
 
-  // Через 2 секунды показываем тему
   setTimeout(() => {
     if (loader) {
       loader.style.display = 'none';
@@ -140,7 +169,6 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
-// Фейерверки (оставляем без изменений)
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
