@@ -82,15 +82,9 @@ tasks.forEach(task => {
       }
     }
 
-    // Меняем стрелку на загрузочный спиннер на 1.5 секунды
-    const originalArrowContent = arrow.textContent;
-    arrow.textContent = '⏳'; // или можно использовать '⌛'
-    arrow.classList.add('loading');
-    
-    // Через 1.5 секунды меняем на галочку
+    // Просто ждем 1.5 секунды и показываем галочку
     setTimeout(() => {
       arrow.textContent = '✔';
-      arrow.classList.remove('loading');
       arrow.classList.add('checked');
       completedTasks++;
 
