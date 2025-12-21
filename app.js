@@ -1,13 +1,13 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
+// 1. Получаем динамический ID сообщения, который бот передал в URL
 const urlParams = new URLSearchParams(window.location.search);
-const userId = urlParams.get('user_id');
+const dynamicPreparedMessageId = urlParams.get('message_id');
 
-let preparedMessageId = null;
-
-const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
+// Конфигурация
 const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
+const shareFallbackText = "🙈 Хочешь получить лучшую тему для тебя? Заходи в бота: https://t.me/temyroombot";
 
 const themes = [
   {
@@ -37,69 +37,30 @@ const themes = [
   }
 ];
 
-async function requestPreparedMessageId() {
-  if (!userId || !tg?.sendData) {
-    console.error('No userId or sendData available');
-    return null;
-  }
-
-  return new Promise((resolve) => {
-    // Отправляем запрос
-    tg.sendData(`get_prepared_id:${userId}`);
-    
-    const timeout = setTimeout(() => {
-      console.error('Timeout waiting for prepared message ID');
-      resolve(null);
-    }, 5000);
-    
-    // Обрабатываем ответ
-    tg.onEvent('webAppDataReceived', (data) => {
-      clearTimeout(timeout);
-      const response = data.data;
-      
-      if (response.startsWith('ID:')) {
-        const id = response.split(':')[1];
-        console.log('Received prepared message ID:', id);
-        resolve(id);
-      } else if (response.startsWith('ERROR:')) {
-        console.error('Bot error:', response);
-        resolve(null);
-      }
-    });
-  });
-}
-
-// Получаем ID при загрузке
-(async () => {
-  if (userId) {
-    preparedMessageId = await requestPreparedMessageId();
-    console.log('Prepared message ID ready:', preparedMessageId);
-  }
-})();
-
-// Отслеживание заданий
 let completedTasks = 0;
 const totalTasks = 2;
-const tasks = document.querySelectorAll('.task');
 
+// Логика заданий
+const tasks = document.querySelectorAll('.task');
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
   task.addEventListener('click', () => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
     
-    if (arrow.classList.contains('checked')) {
-      return;
-    }
+    if (arrow.classList.contains('checked')) return;
 
     if (type === 'share') {
-      // Используем ID, полученный от бота
-      if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing prepared message:", preparedMessageId);
-        tg.shareMessage(preparedMessageId);
+      // Пытаемся использовать dynamicPreparedMessageId для красивого превью
+      if (tg?.isVersionAtLeast?.('7.8') && dynamicPreparedMessageId) {
+        tg.shareMessage(dynamicPreparedMessageId);
       } else {
-        console.warn("shareMessage not supported, using fallback");
-        fallbackShare();
+        // Фолбэк если ID нет или версия ТГ старая
+        if (navigator.share) {
+          navigator.share({ text: shareFallbackText }).catch(console.error);
+        } else {
+          alert('Поделитесь ссылкой на бота с друзьями!');
+        }
       }
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
@@ -109,41 +70,41 @@ tasks.forEach(task => {
       }
     }
 
+    // Имитация проверки выполнения (галочка через 2 сек)
     setTimeout(() => {
-      arrow.textContent = '✔';
-      arrow.classList.add('checked');
-      completedTasks++;
-      if (completedTasks === totalTasks) {
-        document.getElementById('doneBtn').disabled = false;
+      if (!arrow.classList.contains('checked')) {
+        arrow.textContent = '✔';
+        arrow.classList.add('checked');
+        completedTasks++;
+        if (completedTasks === totalTasks) {
+          document.getElementById('doneBtn').disabled = false;
+        }
       }
-    }, 1500);
+    }, 2000);
   });
 });
 
-function fallbackShare() {
-  alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
-  if (navigator.share) {
-    navigator.share({ text: shareMessageText }).catch(err => console.log('Web Share API failed:', err));
-  }
-}
-
+// Кнопка "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
   if (completedTasks < totalTasks) return;
 
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
 
+  // Скрываем интерфейс заданий
   ['.header', '.tasks', '#instructions', '#doneBtn'].forEach(selector => {
     const el = document.querySelector(selector);
     if (el) el.style.display = 'none';
   });
 
+  // Показываем лоадер
   const loader = document.getElementById('loader');
   if (loader) {
     loader.classList.add('fullscreen');
-    loader.style.display = "flex";
+    loader.style.display = 'flex';
   }
 
+  // Через 2 секунды показываем тему
   setTimeout(() => {
     if (loader) {
       loader.style.display = 'none';
@@ -152,6 +113,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
     document.getElementById("themeMessage").textContent = "Темы обновляются каждые 24 часа.";
     document.querySelector(".theme-display").style.display = "block";
+    
     const overlay = document.querySelector('.overlay');
     const modal = document.querySelector('.modal');
     if (overlay) overlay.classList.add('fullscreen');
@@ -169,6 +131,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
+// Фейерверки
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
@@ -199,42 +162,27 @@ function startFireworks(duration = 3000) {
     }
   }
 
-  window.addEventListener('resize', () => {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-  });
-
   function loop() {
     ctx.clearRect(0,0,w,h);
     if (Math.random() < 0.08) createBurst(rand(w*0.2,w*0.8), rand(h*0.15,h*0.6));
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
-      p.vy += 0.04;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.age++;
+      p.vy += 0.04; p.x += p.vx; p.y += p.vy; p.age++;
       const t = p.age / p.life;
-      const alpha = Math.max(1 - t, 0);
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = Math.max(1 - t, 0);
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2.2 * (1 - t) + 0.6, 0, Math.PI*2);
       ctx.fill();
       if (p.age >= p.life) particles.splice(i,1);
     }
-    ctx.globalAlpha = 1;
     animId = requestAnimationFrame(loop);
   }
 
-  createBurst(w*0.5, h*0.35);
-  createBurst(w*0.7, h*0.45);
   animId = requestAnimationFrame(loop);
-
   setTimeout(() => {
     cancelAnimationFrame(animId);
-    particles.length = 0;
     ctx.clearRect(0,0,w,h);
     canvas.style.display = 'none';
-    canvas.classList.remove('fireworks-active');
   }, duration);
 }
