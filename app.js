@@ -53,6 +53,11 @@ tasks.forEach(task => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
 
+    // Если задание уже выполнено, ничего не делаем
+    if (arrow.classList.contains('checked')) {
+      return;
+    }
+
     if (type === 'share') {
       // shareMessage - показывает интерфейс выбора чата
       if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
@@ -76,9 +81,7 @@ tasks.forEach(task => {
         window.open(channelUrl, '_blank');
       }
     }
-
-    // Помечаем задание выполненным 
-    if (!arrow.classList.contains('checked')) {
+    setTimeout(() => {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
@@ -86,7 +89,7 @@ tasks.forEach(task => {
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
-    }
+    }, 1500);
   });
 });
 
@@ -117,7 +120,6 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     loader.style.display = 'flex';
   }
 
-  // Через 2 секунды показываем тему
   setTimeout(() => {
     if (loader) {
       loader.style.display = 'none';
