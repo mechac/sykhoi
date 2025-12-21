@@ -106,7 +106,7 @@ function fallbackShare() {
 document.getElementById("doneBtn").addEventListener("click", () => {
   if (completedTasks < totalTasks) return;
 
-  const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
+  const index = Math.floor(Math.random() * themes.length);
   const selected = themes[index];
 
   // Скрываем начальный экран
