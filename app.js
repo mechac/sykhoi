@@ -59,35 +59,30 @@ tasks.forEach(task => {
     }
 
     if (type === 'share') {
-  let messageToShare = preparedMessageId || STATIC_PREPARED_ID;
+  // Всегда используем один и тот же статический prepared message ID
+  const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
 
   if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-    console.log("Sharing prepared message:", messageToShare);
-    tg.shareMessage(messageToShare);
+    console.log("Sharing static prepared message:", STATIC_PREPARED_ID);
+    tg.shareMessage(STATIC_PREPARED_ID);
   } else {
     console.warn("shareMessage not supported, using fallback");
     fallbackShare();
   }
-} else if (type === 'subscribe') {
-      if (tg && tg.openTelegramLink) {
-        tg.openTelegramLink(channelUrl);
-      } else {
-        window.open(channelUrl, '_blank');
-      }
-    }
 
-    // Просто ждем 1.5 секунды и показываем галочку
-    setTimeout(() => {
+  // Имитируем выполнение задания (галочка через 1.5 сек)
+  setTimeout(() => {
+    const arrow = task.querySelector('.arrow');
+    if (!arrow.classList.contains('checked')) {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
-
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
-    }, 1500);
-  });
-});
+    }
+  }, 1500);
+}
 
 // Фолбэк для старых версий
 function fallbackShare() {
