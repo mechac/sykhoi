@@ -1,5 +1,7 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg && tg.expand) tg.expand();
 
 // Получаем ID подготовленного сообщения из URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -82,9 +84,15 @@ tasks.forEach(task => {
       }
     }
 
-    // Просто ждем 1.5 секунды и показываем галочку
+    // Меняем стрелку на загрузочный спиннер на 1.5 секунды
+    const originalArrowContent = arrow.textContent;
+    arrow.textContent = '⏳'; // или можно использовать '⌛'
+    arrow.classList.add('loading');
+    
+    // Через 1.5 секунды меняем на галочку
     setTimeout(() => {
       arrow.textContent = '✔';
+      arrow.classList.remove('loading');
       arrow.classList.add('checked');
       completedTasks++;
 
