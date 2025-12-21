@@ -1,71 +1,357 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>Темы Telegram</title>
-  <meta property="og:title" content="Бесплатные подарки каждые 24 часа">
-  <meta property="og:description" content="🙈 Хочешь получить бесплатные подарки? Получай каждые 24 часа в бесплатной рулетке!">
-  <meta property="og:image" content="https://mechac.github.io/sykhoi/mess.jpg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://mechac.github.io/sykhoi/index.html">
-  <meta name="twitter:card" content="summary_large_image">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scable=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="style.css">
-  <script src="telegram-web-app.js"></script>
-</head>
-<body>
+// ===== Инициализация Telegram Web App и получение параметров =====
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+const userId = tg?.initDataUnsafe?.user?.id || null;
 
-<div class="overlay">
-  <div class="modal">
-    <div class="header">
-      <h2>Выполните требования</h2>
-      <span class="close">✕</span>
-    </div>
-    <p id="instructions" class="subtitle">Чтобы получить тему</p>
+// Получаем message_id из URL (если передан через shareMessage)
+const urlParams = new URLSearchParams(window.location.search);
+const messageIdFromUrl = urlParams.get('message_id');
 
-    <div class="tasks">
-      <div class="task" data-task="share">
-        <div class="icon blue">✉️</div>
-        <div>
-          <strong>Отправить 3 друзьям</strong>
-          <p>Поделитесь сообщением в 3 ваших чатах</p>
-        </div>
-        <span class="arrow">›</span>
-      </div>
+if (tg && tg.expand) {
+    try {
+        tg.expand();
+    } catch (e) {
+        console.warn('Error expanding WebApp:', e);
+    }
+}
 
-      <div class="task" data-task="subscribe">
-        <div class="icon orange">📢</div>
-        <div>
-          <strong>Подписаться на канал</strong>
-          <p>И вернуться сюда</p>
-        </div>
-        <span class="arrow">›</span>
-      </div>
-    </div>
+// Константы приложения
+const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
+const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
-    <div id="loader" class="loader" style="display: none;">
-      <img src="dice.gif" alt="loading">
-    </div>
+// Список тем
+const themes = [
+  {
+    name: "Темная тема",
+    url: "https://t.me/addtheme/K5q9kYcFSAeFO3PI",
+    preview: {
+      header: "#0f1720",
+      headerText: "#e6eef8",
+      bg: "#07101a",
+      body: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))",
+      incoming: "rgba(255,255,255,0.06)",
+      outgoing: "#2f6bff",
+      text: "#e6eef8"
+    }
+  },
+  {
+    name: "Светлая тема",
+    url: "https://t.me/addtheme/W2iF6QpKuv1yVYnT",
+    preview: {
+      header: "#f1f5f9",
+      headerText: "#0b1220",
+      bg: "#ffffff",
+      body: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00))",
+      incoming: "#f1f5f9",
+      outgoing: "#2f6bff",
+      text: "#0b1220"
+    }
+  },
+  {
+    name: "Синяя тема",
+    url: "https://t.me/bg/lr3hGi3U-UqyDAAArcRJk5yooy0",
+    preview: {
+      header: "#05233a",
+      headerText: "#eaf6ff",
+      bg: "#06283e",
+      body: "linear-gradient(180deg, rgba(6,40,62,0.02), rgba(6,40,62,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#1e90ff",
+      text: "#eaf6ff"
+    }
+  },
+  {
+    name: "Зелёная тема",
+    url: "https://t.me/bg/9zHDI1iEuEoREAAASrlWw2E4vNk",
+    preview: {
+      header: "#072016",
+      headerText: "#e6f8ef",
+      bg: "#062217",
+      body: "linear-gradient(180deg, rgba(6,34,23,0.02), rgba(6,34,23,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#2fbf6b",
+      text: "#e6f8ef"
+    }
+  },
+  {
+    name: "Красная тема",
+    url: "https://t.me/bg/xwN9xVivsEq5DQAAFft1SLmXAaU",
+    preview: {
+      header: "#2a0b0b",
+      headerText: "#ffeef0",
+      bg: "#2a0b0b",
+      body: "linear-gradient(180deg, rgba(42,11,11,0.02), rgba(42,11,11,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#ff6b6b",
+      text: "#ffeef0"
+    }
+  }
+];
 
-    <div class="theme-display" style="display: none;">
-      <div class="theme-card">
-        <h2 id="randomTheme"></h2>
-        <p id="themeMessage" class="subtitle">Темы обновляются каждые 2 часа.</p>
+// Функция для запроса prepared message у бота
+async function requestPreparedMessage() {
+    if (!tg || !userId) {
+        console.warn('Telegram Web App or user ID is not available');
+        return null;
+    }
+    
+    // Если message_id уже есть в URL, используем его
+    if (messageIdFromUrl) {
+        console.log('Using message_id from URL:', messageIdFromUrl);
+        return messageIdFromUrl;
+    }
+    
+    try {
+        console.log('Requesting prepared message from bot...');
+        tg.sendData(JSON.stringify({
+            action: 'get_prepared_message',
+            user_id: userId
+        }));
+        
+        // В реальном приложении здесь нужно ждать ответа от бота
+        // Для упрощения возвращаем null и используем URL без параметров
+        return null;
+    } catch (e) {
+        console.error('Error requesting prepared message:', e);
+        return null;
+    }
+}
 
-        <button id="installBtn" class="install-btn">Установить тему</button>
-      </div>
-    </div>
+// Отслеживание выполненных заданий
+let completedTasks = 0;
+const totalTasks = 2;
 
-    <canvas id="fireworks" style="display:none;"></canvas>
+// Функция для безопасного вызова shareMessage
+function safeShareMessage() {
+    if (!tg) {
+        console.error('Telegram Web App is not available');
+        return false;
+    }
+    
+    // Проверяем готовность
+    if (!tg.ready || !tg.expand) {
+        console.error('Telegram Web App is not fully ready');
+        return false;
+    }
+    
+    // Проверяем наличие метода shareMessage (без строгой проверки версии)
+    if (!tg.shareMessage) {
+        console.warn('shareMessage is not available in this version');
+        return false;
+    }
+    
+    return true;
+}
 
-    <button id="doneBtn" disabled>Готово</button>
-  </div>
-</div>
+// Обработчики заданий
+const tasks = document.querySelectorAll('.task');
+tasks.forEach(task => {
+  task.style.cursor = 'pointer';
+  task.addEventListener('click', () => {
+    const type = task.dataset.task;
+    const arrow = task.querySelector('.arrow');
 
-<script src="app.js"></script>
-</body>
-</html>
+    if (type === 'share') {
+      console.log('Share button clicked, checking tg object...');
+      console.log('tg available:', !!tg);
+      console.log('tg.shareMessage:', tg?.shareMessage);
+      console.log('tg.ready:', tg?.ready);
+      
+      // Упрощенная проверка - вызываем напрямую после ready
+      if (tg && tg.shareMessage) {
+        try {
+          // Готовим текст для sharing
+          const shareUrl = messageIdFromUrl ? 
+            `${window.location.origin}${window.location.pathname}?message_id=${messageIdFromUrl}` :
+            window.location.href;
+          
+          const fullText = shareMessageText + '\n\n' + shareUrl;
+          console.log('Attempting to share:', fullText);
+          
+          // Вызываем shareMessage
+          tg.shareMessage(fullText);
+          console.log('shareMessage called successfully');
+          
+        } catch (error) {
+          console.error('Error calling shareMessage:', error);
+          // Fallback на alert
+          alert('Ошибка при отправке. Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
+        }
+      } else {
+        console.warn('shareMessage not available, using fallback');
+        alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
+        if (navigator.share) {
+          navigator.share({ text: shareMessageText });
+        }
+      }
+    } else if (type === 'subscribe') {
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(channelUrl);
+      } else {
+        window.open(channelUrl, '_blank');
+      }
+    }
+
+    // Помечаем задание выполненным
+    if (!arrow.classList.contains('checked')) {
+      arrow.textContent = '✔';
+      arrow.classList.add('checked');
+      completedTasks++;
+
+      if (completedTasks === totalTasks) {
+        document.getElementById('doneBtn').disabled = false;
+      }
+    }
+  });
+});
+
+// Обработчик кнопки "Готово"
+document.getElementById("doneBtn").addEventListener("click", () => {
+  if (completedTasks < totalTasks) return;
+
+  const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
+  const selected = themes[index];
+
+  const header = document.querySelector('.header');
+  const tasksDiv = document.querySelector('.tasks');
+  const instructions = document.getElementById('instructions');
+  if (header) header.style.display = 'none';
+  if (tasksDiv) tasksDiv.style.display = 'none';
+  if (instructions) instructions.style.display = 'none';
+
+  const doneBtn = document.getElementById('doneBtn');
+  if (doneBtn) doneBtn.style.display = 'none';
+
+  const loader = document.getElementById('loader');
+  if (loader) {
+    loader.classList.add('fullscreen');
+    loader.style.display = 'flex';
+  }
+
+  setTimeout(() => {
+    if (loader) {
+      loader.style.display = 'none';
+      loader.classList.remove('fullscreen');
+    }
+
+    document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
+    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+
+    document.querySelector(".theme-display").style.display = "block";
+
+    const overlay = document.querySelector('.overlay');
+    const modal = document.querySelector('.modal');
+    if (overlay) overlay.classList.add('fullscreen');
+    if (modal) modal.classList.add('fullscreen');
+
+    const installBtn = document.getElementById("installBtn");
+    installBtn.onclick = () => {
+      if (tg && tg.openLink) {
+        tg.openLink(selected.url);
+      } else {
+        window.open(selected.url, "_blank");
+      }
+    };
+
+    startFireworks(3000);
+  }, 2000);
+});
+
+/* ===== Фейерверки ===== */
+function startFireworks(duration = 3000) {
+  const canvas = document.getElementById('fireworks');
+  if (!canvas) return;
+  canvas.classList.add('fireworks-active');
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+
+  const particles = [];
+  let animId;
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+
+  function createBurst(x, y) {
+    const count = 24 + Math.floor(Math.random() * 20);
+    const hue = Math.floor(rand(0, 360));
+    for (let i = 0; i < count; i++) {
+      const speed = rand(1, 6);
+      const angle = rand(0, Math.PI * 2);
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 60 + Math.floor(rand(0, 40)),
+        age: 0,
+        color: `hsl(${hue + rand(-30,30)}, 80%, ${rand(50,70)}%)`
+      });
+    }
+  }
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+
+  window.addEventListener('resize', resize);
+
+  function loop() {
+    ctx.clearRect(0,0,w,h);
+    if (Math.random() < 0.08) createBurst(rand(w*0.2,w*0.8), rand(h*0.15,h*0.6));
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += 0.04;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.age++;
+      const t = p.age / p.life;
+      const alpha = Math.max(1 - t, 0);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.2 * (1 - t) + 0.6, 0, Math.PI*2);
+      ctx.fill();
+      if (p.age >= p.life) particles.splice(i,1);
+    }
+
+    ctx.globalAlpha = 1;
+    animId = requestAnimationFrame(loop);
+  }
+
+  createBurst(w*0.5, h*0.35);
+  createBurst(w*0.7, h*0.45);
+  animId = requestAnimationFrame(loop);
+
+  setTimeout(() => {
+    cancelAnimationFrame(animId);
+    particles.length = 0;
+    ctx.clearRect(0,0,w,h);
+    canvas.style.display = 'none';
+    canvas.classList.remove('fireworks-active');
+    window.removeEventListener('resize', resize);
+  }, duration);
+}
+
+// Инициализация при загрузке страницы
+window.addEventListener('load', async () => {
+    if (!tg) {
+        console.warn('Telegram Web App is not available');
+        return;
+    }
+    
+    console.log('Telegram Web App initialized:', tg);
+    console.log('User ID:', userId);
+    console.log('Message ID from URL:', messageIdFromUrl);
+    
+    // Дожидаемся полной инициализации TMA
+    if (tg.ready) {
+        tg.ready();
+        console.log('TMA is ready');
+    }
+    
+    // Запрашиваем prepared message при необходимости
+    await requestPreparedMessage();
+});
