@@ -1,14 +1,17 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
 
-// Получаем ID подготовленного сообщения из URL
+// Получаем ID подготовленного сообщения из URL (на всякий случай оставляем, но больше не используем для шаринга)
 const urlParams = new URLSearchParams(window.location.search);
 const preparedMessageId = urlParams.get('message_id');
-const STATIC_PREPARED_ID = "83mI6agQIgVyD6OW"
+
 // Для отладки
 console.log('Telegram WebApp:', tg);
-console.log('Prepared Message ID:', preparedMessageId);
+console.log('Prepared Message ID из URL:', preparedMessageId);
 console.log('WebApp version:', tg?.version);
+
+// СТАТИЧЕСКИЙ ID — всегда используем только его при шаринге
+const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
 
 // Текст для фолбэка (если shareMessage не сработает)
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
@@ -45,46 +48,48 @@ const themes = [
 // Отслеживание выполненных заданий
 let completedTasks = 0;
 const totalTasks = 2;
-
 const tasks = document.querySelectorAll('.task');
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
   task.addEventListener('click', () => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
-
-    // Если задание уже выполнено, ничего не делаем
+    
+    // Если задание уже выполнено — ничего не делаем
     if (arrow.classList.contains('checked')) {
       return;
     }
 
     if (type === 'share') {
-  // Всегда используем один и тот же статический prepared message ID
-  const STATIC_PREPARED_ID = "z0K1nJTmcwx3jbbN";
+      // Всегда используем статический prepared message ID
+      if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
+        console.log("Sharing static prepared message:", STATIC_PREPARED_ID);
+        tg.shareMessage(STATIC_PREPARED_ID);
+      } else {
+        console.warn("shareMessage not supported, using fallback");
+        fallbackShare();
+      }
+    } else if (type === 'subscribe') {
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(channelUrl);
+      } else {
+        window.open(channelUrl, '_blank');
+      }
+    }
 
-  if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-    console.log("Sharing static prepared message:", STATIC_PREPARED_ID);
-    tg.shareMessage(STATIC_PREPARED_ID);
-  } else {
-    console.warn("shareMessage not supported, using fallback");
-    fallbackShare();
-  }
-
-  // Имитируем выполнение задания (галочка через 1.5 сек)
-  setTimeout(() => {
-    const arrow = task.querySelector('.arrow');
-    if (!arrow.classList.contains('checked')) {
+    // Показываем галочку через 1.5 секунды (имитация выполнения)
+    setTimeout(() => {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
-    }
-  }, 1500);
-}
+    }, 1500);
+  });
+});
 
-// Фолбэк для старых версий
+// Фолбэк для старых версий Telegram
 function fallbackShare() {
   alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
   if (navigator.share) {
@@ -92,6 +97,7 @@ function fallbackShare() {
   }
 }
 
+// Кнопка "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
   if (completedTasks < totalTasks) return;
 
@@ -117,11 +123,9 @@ document.getElementById("doneBtn").addEventListener("click", () => {
       loader.style.display = 'none';
       loader.classList.remove('fullscreen');
     }
-
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
     document.getElementById("themeMessage").textContent = "Темы обновляются каждые 24 часа.";
     document.querySelector(".theme-display").style.display = "block";
-
     const overlay = document.querySelector('.overlay');
     const modal = document.querySelector('.modal');
     if (overlay) overlay.classList.add('fullscreen');
@@ -139,17 +143,15 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
-//Фейерверки 
+// Фейерверки (оставляем без изменений)
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
   canvas.classList.add('fireworks-active');
   canvas.style.display = 'block';
   const ctx = canvas.getContext('2d');
-
   let w = canvas.width = window.innerWidth;
   let h = canvas.height = window.innerHeight;
-
   const particles = [];
   let animId;
 
@@ -180,7 +182,6 @@ function startFireworks(duration = 3000) {
   function loop() {
     ctx.clearRect(0,0,w,h);
     if (Math.random() < 0.08) createBurst(rand(w*0.2,w*0.8), rand(h*0.15,h*0.6));
-
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.vy += 0.04;
@@ -196,7 +197,6 @@ function startFireworks(duration = 3000) {
       ctx.fill();
       if (p.age >= p.life) particles.splice(i,1);
     }
-
     ctx.globalAlpha = 1;
     animId = requestAnimationFrame(loop);
   }
