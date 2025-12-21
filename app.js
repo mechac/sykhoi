@@ -1,7 +1,5 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg && tg.expand) tg.expand();
-const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-if (tg && tg.expand) tg.expand();
 
 // Получаем ID подготовленного сообщения из URL
 const urlParams = new URLSearchParams(window.location.search);
