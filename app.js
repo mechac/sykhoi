@@ -1,51 +1,120 @@
+// ===== Инициализация Telegram Web App и получение параметров =====
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+const userId = tg?.initDataUnsafe?.user?.id || null;
+
+// Получаем message_id из URL (если передан через shareMessage)
+const urlParams = new URLSearchParams(window.location.search);
+const messageIdFromUrl = urlParams.get('message_id');
+
 if (tg && tg.expand) tg.expand();
 
-// Получаем ID подготовленного сообщения из URL
-const urlParams = new URLSearchParams(window.location.search);
-const preparedMessageId = urlParams.get('message_id');
-
-// Для отладки
-console.log('Telegram WebApp:', tg);
-console.log('Prepared Message ID:', preparedMessageId);
-console.log('WebApp version:', tg?.version);
-
-// Текст для фолбэка (если shareMessage не сработает)
+// Константы приложения
 const shareMessageText = "🙈 Хочешь получить лучшую тему для тебя, чтобы украсить Telegram?\nПолучай свои рандомные темы только для тебя каждые 24 часа!";
 const channelUrl = "https://t.me/+7tUrZjQhP-4wMGZi";
 
+// Список тем
 const themes = [
   {
-    name: "1 тема",
+    name: "Темная тема",
     url: "https://t.me/addtheme/K5q9kYcFSAeFO3PI",
-    preview: { header: "#0f1720", headerText: "#e6eef8", bg: "#07101a", body: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))", incoming: "rgba(255,255,255,0.06)", outgoing: "#2f6bff", text: "#e6eef8" }
+    preview: {
+      header: "#0f1720",
+      headerText: "#e6eef8",
+      bg: "#07101a",
+      body: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))",
+      incoming: "rgba(255,255,255,0.06)",
+      outgoing: "#2f6bff",
+      text: "#e6eef8"
+    }
   },
   {
-    name: "2 тема",
+    name: "Светлая тема",
     url: "https://t.me/addtheme/W2iF6QpKuv1yVYnT",
-    preview: { header: "#f1f5f9", headerText: "#0b1220", bg: "#ffffff", body: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00))", incoming: "#f1f5f9", outgoing: "#2f6bff", text: "#0b1220" }
+    preview: {
+      header: "#f1f5f9",
+      headerText: "#0b1220",
+      bg: "#ffffff",
+      body: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00))",
+      incoming: "#f1f5f9",
+      outgoing: "#2f6bff",
+      text: "#0b1220"
+    }
   },
   {
-    name: "3 тема",
+    name: "Синяя тема",
     url: "https://t.me/bg/lr3hGi3U-UqyDAAArcRJk5yooy0",
-    preview: { header: "#05233a", headerText: "#eaf6ff", bg: "#06283e", body: "linear-gradient(180deg, rgba(6,40,62,0.02), rgba(6,40,62,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#1e90ff", text: "#eaf6ff" }
+    preview: {
+      header: "#05233a",
+      headerText: "#eaf6ff",
+      bg: "#06283e",
+      body: "linear-gradient(180deg, rgba(6,40,62,0.02), rgba(6,40,62,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#1e90ff",
+      text: "#eaf6ff"
+    }
   },
   {
-    name: "4 тема",
+    name: "Зелёная тема",
     url: "https://t.me/bg/9zHDI1iEuEoREAAASrlWw2E4vNk",
-    preview: { header: "#072016", headerText: "#e6f8ef", bg: "#062217", body: "linear-gradient(180deg, rgba(6,34,23,0.02), rgba(6,34,23,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#2fbf6b", text: "#e6f8ef" }
+    preview: {
+      header: "#072016",
+      headerText: "#e6f8ef",
+      bg: "#062217",
+      body: "linear-gradient(180deg, rgba(6,34,23,0.02), rgba(6,34,23,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#2fbf6b",
+      text: "#e6f8ef"
+    }
   },
   {
-    name: "5 тема",
+    name: "Красная тема",
     url: "https://t.me/bg/xwN9xVivsEq5DQAAFft1SLmXAaU",
-    preview: { header: "#2a0b0b", headerText: "#ffeef0", bg: "#2a0b0b", body: "linear-gradient(180deg, rgba(42,11,11,0.02), rgba(42,11,11,0.00))", incoming: "rgba(255,255,255,0.04)", outgoing: "#ff6b6b", text: "#ffeef0" }
+    preview: {
+      header: "#2a0b0b",
+      headerText: "#ffeef0",
+      bg: "#2a0b0b",
+      body: "linear-gradient(180deg, rgba(42,11,11,0.02), rgba(42,11,11,0.00))",
+      incoming: "rgba(255,255,255,0.04)",
+      outgoing: "#ff6b6b",
+      text: "#ffeef0"
+    }
   }
 ];
+
+// Функция для запроса prepared message у бота
+async function requestPreparedMessage() {
+    if (!tg || !userId) {
+        console.warn('Telegram Web App or user ID is not available');
+        return null;
+    }
+    
+    // Если message_id уже есть в URL, используем его
+    if (messageIdFromUrl) {
+        console.log('Using message_id from URL:', messageIdFromUrl);
+        return messageIdFromUrl;
+    }
+    
+    try {
+        console.log('Requesting prepared message from bot...');
+        tg.sendData(JSON.stringify({
+            action: 'get_prepared_message',
+            user_id: userId
+        }));
+        
+        // В реальном приложении здесь нужно ждать ответа от бота
+        // Для упрощения возвращаем null и используем URL без параметров
+        return null;
+    } catch (e) {
+        console.error('Error requesting prepared message:', e);
+        return null;
+    }
+}
 
 // Отслеживание выполненных заданий
 let completedTasks = 0;
 const totalTasks = 2;
 
+// Обработчики заданий
 const tasks = document.querySelectorAll('.task');
 tasks.forEach(task => {
   task.style.cursor = 'pointer';
@@ -53,26 +122,21 @@ tasks.forEach(task => {
     const type = task.dataset.task;
     const arrow = task.querySelector('.arrow');
 
-    // Если задание уже выполнено, ничего не делаем
-    if (arrow.classList.contains('checked')) {
-      return;
-    }
-
     if (type === 'share') {
-      // shareMessage - показывает интерфейс выбора чата
-      if (preparedMessageId && tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing prepared message:", preparedMessageId);
-        tg.shareMessage(preparedMessageId);
-      } 
-      //Альтернатива: просто текст
-      else if (tg?.isVersionAtLeast?.('7.8') && tg.shareMessage) {
-        console.log("Sharing plain text");
-        tg.shareMessage(shareMessageText);
-      } 
-      // Фолбэк: если не поддерживается
-      else {
-        console.warn("shareMessage not supported, using fallback");
-        fallbackShare();
+      // Исправленная проверка версии
+      if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('7.8') && tg.shareMessage) {
+        // Формируем URL с message_id для sharing
+        const shareUrl = messageIdFromUrl ? 
+          `${window.location.origin}${window.location.pathname}?message_id=${messageIdFromUrl}` :
+          window.location.href;
+        
+        tg.shareMessage(shareMessageText + '\n\n' + shareUrl);
+      } else {
+        // Fallback: показать текст для ручного копирования
+        alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
+        if (navigator.share) {
+          navigator.share({ text: shareMessageText });
+        }
       }
     } else if (type === 'subscribe') {
       if (tg && tg.openTelegramLink) {
@@ -81,7 +145,9 @@ tasks.forEach(task => {
         window.open(channelUrl, '_blank');
       }
     }
-    setTimeout(() => {
+
+    // Помечаем задание выполненным
+    if (!arrow.classList.contains('checked')) {
       arrow.textContent = '✔';
       arrow.classList.add('checked');
       completedTasks++;
@@ -89,31 +155,27 @@ tasks.forEach(task => {
       if (completedTasks === totalTasks) {
         document.getElementById('doneBtn').disabled = false;
       }
-    }, 1500);
+    }
   });
 });
 
-// Фолбэк для старых версий
-function fallbackShare() {
-  alert('Поделитесь этим сообщением в 3 чатах:\n\n' + shareMessageText);
-  if (navigator.share) {
-    navigator.share({ text: shareMessageText }).catch(err => console.log('Web Share API failed:', err));
-  }
-}
-
+// Обработчик кнопки "Готово"
 document.getElementById("doneBtn").addEventListener("click", () => {
   if (completedTasks < totalTasks) return;
 
   const index = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % themes.length;
   const selected = themes[index];
 
-  // Скрываем начальный экран
-  ['.header', '.tasks', '#instructions', '#doneBtn'].forEach(selector => {
-    const el = document.querySelector(selector);
-    if (el) el.style.display = 'none';
-  });
+  const header = document.querySelector('.header');
+  const tasksDiv = document.querySelector('.tasks');
+  const instructions = document.getElementById('instructions');
+  if (header) header.style.display = 'none';
+  if (tasksDiv) tasksDiv.style.display = 'none';
+  if (instructions) instructions.style.display = 'none';
 
-  // Показываем лоадер
+  const doneBtn = document.getElementById('doneBtn');
+  if (doneBtn) doneBtn.style.display = 'none';
+
   const loader = document.getElementById('loader');
   if (loader) {
     loader.classList.add('fullscreen');
@@ -127,7 +189,8 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     }
 
     document.getElementById("randomTheme").textContent = "Тадаам! Ваша тема готова.";
-    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 24 часа.";
+    document.getElementById("themeMessage").textContent = "Темы обновляются каждые 2 часа.";
+
     document.querySelector(".theme-display").style.display = "block";
 
     const overlay = document.querySelector('.overlay');
@@ -135,7 +198,8 @@ document.getElementById("doneBtn").addEventListener("click", () => {
     if (overlay) overlay.classList.add('fullscreen');
     if (modal) modal.classList.add('fullscreen');
 
-    document.getElementById("installBtn").onclick = () => {
+    const installBtn = document.getElementById("installBtn");
+    installBtn.onclick = () => {
       if (tg && tg.openLink) {
         tg.openLink(selected.url);
       } else {
@@ -147,7 +211,7 @@ document.getElementById("doneBtn").addEventListener("click", () => {
   }, 2000);
 });
 
-//Фейерверки 
+/* ===== Фейерверки ===== */
 function startFireworks(duration = 3000) {
   const canvas = document.getElementById('fireworks');
   if (!canvas) return;
@@ -170,7 +234,8 @@ function startFireworks(duration = 3000) {
       const speed = rand(1, 6);
       const angle = rand(0, Math.PI * 2);
       particles.push({
-        x: x, y: y,
+        x: x,
+        y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 60 + Math.floor(rand(0, 40)),
@@ -180,10 +245,12 @@ function startFireworks(duration = 3000) {
     }
   }
 
-  window.addEventListener('resize', () => {
+  function resize() {
     w = canvas.width = window.innerWidth;
     h = canvas.height = window.innerHeight;
-  });
+  }
+
+  window.addEventListener('resize', resize);
 
   function loop() {
     ctx.clearRect(0,0,w,h);
@@ -219,5 +286,21 @@ function startFireworks(duration = 3000) {
     ctx.clearRect(0,0,w,h);
     canvas.style.display = 'none';
     canvas.classList.remove('fireworks-active');
+    window.removeEventListener('resize', resize);
   }, duration);
 }
+
+// Инициализация при загрузке страницы
+window.addEventListener('load', async () => {
+    if (!tg) {
+        console.warn('Telegram Web App is not available');
+        return;
+    }
+    
+    console.log('Telegram Web App initialized:', tg);
+    console.log('User ID:', userId);
+    console.log('Message ID from URL:', messageIdFromUrl);
+    
+    // Запрашиваем prepared message при необходимости
+    await requestPreparedMessage();
+});
